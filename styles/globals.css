@@ -1,3 +1,35 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Base body colour comes from the body class set in pages/_document.tsx
+   (bg-graphite-950 text-graphite-50). The rules below are global behaviours
+   that don't fit cleanly into utility classes. */
+
+@layer base {
+  html {
+    /* Smooth in-page anchor scrolling for the (later) Help Book TOC. */
+    scroll-behavior: smooth;
+  }
+
+  /* Honour user motion preferences — Lighthouse / WCAG checks animations. */
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  /* Keyboard-focus indicator that always meets WCAG-AA contrast on graphite. */
+  *:focus-visible {
+    outline: 2px solid theme("colors.ember.400");
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+}
