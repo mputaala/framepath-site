@@ -1,6 +1,14 @@
+const path = require("path");
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+
+  // Anchor Turbopack/Webpack to this project root so Next.js doesn't pick up
+  // a stray lockfile elsewhere in the developer's home directory.
+  turbopack: {
+    root: __dirname,
+  },
 
   // Static export — required for GitHub Pages.
   // Replaces the dynamic Next.js server runtime with a pre-rendered out/
