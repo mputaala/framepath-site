@@ -1,12 +1,10 @@
 import { Head, Html, Main, NextScript } from "next/document";
-import Script from "next/script";
 
 const Document = () => {
   return (
-    <Html>
+    <Html lang="en">
       <Head />
-      <body>
-        <Script strategy="beforeInteractive" src="/scripts/darkModeScript.js" />
+      <body className="bg-zinc-900 text-zinc-50 antialiased">
         <Main />
         <NextScript />
       </body>
