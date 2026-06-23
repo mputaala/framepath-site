@@ -4,6 +4,7 @@ import { MDXProvider } from "@mdx-js/react";
 import type { AppProps } from "next/app";
 import Head from "next/head";
 
+import { Analytics } from "../src/components/Analytics";
 import { mdxComponents } from "../src/components/mdx";
 
 const App = ({ Component, pageProps }: AppProps) => {
@@ -19,6 +20,10 @@ const App = ({ Component, pageProps }: AppProps) => {
         />
       </Head>
       <Component {...pageProps} />
+      {/* Cloudflare Web Analytics (US-162). Cookieless, no fingerprint,
+          no consent banner. Renders nothing while the beacon token in
+          src/config/analytics.ts is still the placeholder. */}
+      <Analytics />
     </MDXProvider>
   );
 };
