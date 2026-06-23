@@ -201,6 +201,22 @@ export const normaliseAutolinks = (markdown) => {
 };
 
 /**
+ * Escape `<` characters that MDX would otherwise try to parse as the start
+ * of a JSX tag but cannot — e.g. `<1 s` (a number after `<`), `<24h` etc.
+ * A valid JSX tag name starts with a letter, `$`, or `_`; HTML comments
+ * start with `<!`; closing tags start with `</`. Anything else after `<`
+ * is a prose `<` that needs escaping to `&lt;` so MDX compiles.
+ *
+ * Must run AFTER normaliseAutolinks so the `<url>` autolinks have already
+ * been expanded into `[url](url)` markdown links and don't get caught
+ * here. Safe to run before / after the other body transforms because they
+ * operate on different lexical surfaces.
+ */
+export const escapeMdxUnsafeAngles = (markdown) => {
+  return markdown.replace(/<(?![a-zA-Z_$!/])/g, "&lt;");
+};
+
+/**
  * Remove every line starting with `<!-- internal:` (after optional leading
  * whitespace). Used to scrub maintainer-internal notes the dev repo might
  * carry inline in published policies.
@@ -326,8 +342,8 @@ const handleMarkdownDirectory = async ({
     }
     slugRegistry.set(slug, fileName);
 
-    const cleanedBody = normaliseAutolinks(
-      stripDenyListedLinks(stripInternalComments(body)),
+    const cleanedBody = escapeMdxUnsafeAngles(
+      normaliseAutolinks(stripDenyListedLinks(stripInternalComments(body))),
     );
 
     const meta = {
@@ -473,9 +489,11 @@ const handleMarkdownDirectoryWithFrontmatterGate = async ({
     }
     slugRegistry.set(slug, fileName);
 
-    const cleanedBody = normaliseAutolinks(
-      stripDenyListedLinks(
-        stripInternalComments(stripMarketingSkipSections(parsed.content)),
+    const cleanedBody = escapeMdxUnsafeAngles(
+      normaliseAutolinks(
+        stripDenyListedLinks(
+          stripInternalComments(stripMarketingSkipSections(parsed.content)),
+        ),
       ),
     );
 
