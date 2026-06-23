@@ -8,6 +8,7 @@ import {
   DEFAULT_AVIF_BUDGET_BYTES,
   DEFAULT_THUMBNAIL_WIDTH,
   encodeAvifWithinBudget,
+  escapeMdxUnsafeAngles,
   isPublishedTrue,
   normaliseAutolinks,
   renderFrontmatter,
@@ -430,6 +431,46 @@ describe("slugFromFilename (US-159)", () => {
 
   it("rejects a filename that produces an empty slug", () => {
     expect(() => slugFromFilename("---.md")).toThrow(/empty slug/);
+  });
+});
+
+describe("escapeMdxUnsafeAngles (US-159 MDX compatibility)", () => {
+  it("escapes `<1 s` to `&lt;1 s` (number after <)", () => {
+    expect(escapeMdxUnsafeAngles("delivery (<1 s)")).toBe("delivery (&lt;1 s)");
+  });
+
+  it("escapes `<24 hours` to `&lt;24 hours`", () => {
+    expect(escapeMdxUnsafeAngles("rotate <24 hours")).toBe(
+      "rotate &lt;24 hours",
+    );
+  });
+
+  it("escapes `<` followed by space", () => {
+    expect(escapeMdxUnsafeAngles("a < b")).toBe("a &lt; b");
+  });
+
+  it("leaves `<Component>` JSX alone (letter after <)", () => {
+    expect(escapeMdxUnsafeAngles("<Callout type=\"info\">hi</Callout>")).toBe(
+      "<Callout type=\"info\">hi</Callout>",
+    );
+  });
+
+  it("leaves HTML comments alone (`<!--`)", () => {
+    expect(escapeMdxUnsafeAngles("<!-- regular comment -->")).toBe(
+      "<!-- regular comment -->",
+    );
+  });
+
+  it("leaves closing tags alone (`</foo>`)", () => {
+    expect(escapeMdxUnsafeAngles("</Callout>")).toBe("</Callout>");
+  });
+
+  it("leaves `<$var>` style template starts alone", () => {
+    expect(escapeMdxUnsafeAngles("<$placeholder>")).toBe("<$placeholder>");
+  });
+
+  it("leaves `<_underscore>` style starts alone", () => {
+    expect(escapeMdxUnsafeAngles("<_internal>")).toBe("<_internal>");
   });
 });
 
