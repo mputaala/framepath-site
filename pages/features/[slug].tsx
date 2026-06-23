@@ -62,10 +62,13 @@ const FeaturePage = ({ title, summary, slug, source }: FeaturePageProps) => {
 
 export const getStaticPaths: GetStaticPaths = async () => {
   const dir = FEATURES_DIR();
+  console.log("[debug us-159] getStaticPaths cwd=", process.cwd(), "dir=", dir);
   let fileNames: string[] = [];
   try {
     fileNames = await fs.readdir(dir);
-  } catch {
+    console.log("[debug us-159] readdir returned:", fileNames);
+  } catch (err) {
+    console.log("[debug us-159] readdir failed:", (err as Error).message);
     fileNames = [];
   }
   const paths: { params: { slug: string } }[] = [];
