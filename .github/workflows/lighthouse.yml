@@ -16,6 +16,8 @@ name: Lighthouse CI
 #   actions/upload-artifact@v7.0.1                         -> 043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
 #   peter-evans/find-comment@v4.0.0                        -> b30e6a3c0ed37e7c023ccd3f1db5c6c0b0c23aad
 #   peter-evans/create-or-update-comment@v5.0.0            -> e8674b075228eee787fea43ef493e45ece1004c9
+#   browser-actions/setup-chrome@v2.1.2                    -> 2e1d749697dd1612b833dba4a722266286fbefcd
+#   nanasess/setup-chromedriver@v3.0.0                     -> e913548694400f275b4070efcd90f47dbbc8914c
 
 on:
   pull_request:
@@ -83,11 +85,18 @@ jobs:
             sleep 1
           done
 
-      - name: Install matching Chrome / ChromeDriver for axe-core
-        # @axe-core/cli's bundled ChromeDriver pins to the latest stable
-        # Chrome; ubuntu-latest sometimes lags by one release, breaking the
-        # session-create handshake. browser-driver-manager re-syncs them.
-        run: npx --yes browser-driver-manager install chrome
+      - name: Install matching Chrome + ChromeDriver for axe-core
+        # @axe-core/cli bundles ChromeDriver pinned to the latest stable
+        # Chrome; ubuntu-latest's pre-installed Chrome can lag one release,
+        # which breaks the session-create handshake. browser-actions/setup-chrome
+        # + nanasess/setup-chromedriver install matching versions side-by-side
+        # so axe finds them on PATH.
+        uses: browser-actions/setup-chrome@2e1d749697dd1612b833dba4a722266286fbefcd  # v2.1.2
+        with:
+          chrome-version: stable
+
+      - name: Install matching ChromeDriver
+        uses: nanasess/setup-chromedriver@e913548694400f275b4070efcd90f47dbbc8914c  # v3.0.0
 
       - name: Run axe-core (WCAG 2.1 AA)
         # `--exit` makes axe return non-zero on violations. The shell uses
