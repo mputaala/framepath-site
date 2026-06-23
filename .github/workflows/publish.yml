@@ -78,7 +78,7 @@ jobs:
           # copied into the build, regardless of what else might be present.
           sparse-checkout: |
             Documentation/Policies
-            Documentation/User Guide/Assets/Screenshots/Final
+            Documentation/User Guide/Assets/Screenshots
             Documentation/Features
             Documentation/Guides/Apple Help Book.md
           sparse-checkout-cone-mode: false

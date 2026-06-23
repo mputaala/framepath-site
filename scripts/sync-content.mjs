@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// US-155 + US-156 — sync-content.
+// US-155 + US-156 + US-158 — sync-content.
 //
 // Reads config/sync-allowlist.json, resolves each entry's 'source' against the
 // dev-repo checkout root, and applies the entry's `kind`-specific transform
@@ -24,7 +24,22 @@
 //       Fails the build with a non-zero exit if any allowlisted source is
 //       missing / unreadable / empty, if two policies would produce the same
 //       slug, or if the body is missing an H1 to derive the title.
-//   - image-directory      (US-158, deferred): logged as PENDING.
+//   - image-allowlist     (US-158, Screenshots):
+//       Reads config/screenshot-allowlist.json. For each entry:
+//         1. Validates the entry's `source` resolves under the sync-allowlist
+//            'screenshots-final' boundary via resolveSourcePath().
+//         2. Loads the PNG via Sharp; reads native width / height.
+//         3. Produces an AVIF (quality 50 then progressively higher quality
+//            steps if room in budget), a WebP (quality 80), a re-encoded PNG
+//            (Sharp compression level 9), and a 400w WebP thumbnail.
+//         4. Enforces a per-asset 80 KB AVIF budget (configurable via
+//            allowlist.avifBudgetBytes); fails the build on regression.
+//         5. Writes outputs to <destination>/<id>.{avif,webp,png} +
+//            <destination>/<id>.thumb.webp.
+//         6. Accumulates an entry into <destination>/manifest.json mapping
+//            id -> { avif, webp, png, thumb, width, height, alt, priority }.
+//       Fails the build on missing sources, id collisions, AVIF budget
+//       regressions, or write failures.
 //   - markdown-directory-with-frontmatter-gate (US-159, deferred): PENDING.
 //   - markdown-file        (US-160, deferred): logged as PENDING.
 //
@@ -38,14 +53,27 @@
 //   2 — CLI usage error or allowlist file unreadable.
 
 import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
-import { dirname, extname, join, resolve, sep } from "node:path";
+import { basename, dirname, extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import matter from "gray-matter";
+import sharp from "sharp";
 
 const THIS_FILE = fileURLToPath(import.meta.url);
 const SITE_REPO_ROOT = resolve(THIS_FILE, "..", "..");
 const ALLOWLIST_PATH = resolve(SITE_REPO_ROOT, "config", "sync-allowlist.json");
+const SCREENSHOT_ALLOWLIST_PATH = resolve(
+  SITE_REPO_ROOT,
+  "config",
+  "screenshot-allowlist.json",
+);
+
+/** Default AVIF size budget per asset (US-158 AC); overridable by the
+ * screenshot-allowlist's top-level `avifBudgetBytes`. */
+export const DEFAULT_AVIF_BUDGET_BYTES = 80 * 1024;
+/** Default thumbnail width; overridable by `thumbnailWidth` in the
+ * screenshot-allowlist. */
+export const DEFAULT_THUMBNAIL_WIDTH = 400;
 
 /* ─── path-traversal guard (US-155) ─────────────────────────────────────── */
 
@@ -284,14 +312,212 @@ const handleMarkdownDirectory = async ({
   return written;
 };
 
+/* ─── image-allowlist transform (US-158, Screenshots) ───────────────────── */
+
+/**
+ * Produce an AVIF buffer that fits under `budgetBytes`. Sharp's AVIF encoder
+ * has a per-call `quality` parameter; we try a descending ladder, picking the
+ * highest-quality variant that fits the budget. If even the lowest-quality
+ * step exceeds the budget, returns null so the caller can fail the build
+ * with a clear "this PNG is too dense for the budget — revisit the source"
+ * message rather than silently shipping a too-large asset.
+ */
+export const encodeAvifWithinBudget = async (pngBuffer, budgetBytes) => {
+  const qualityLadder = [60, 50, 40, 35, 30, 25, 20];
+  let best = null;
+  for (const quality of qualityLadder) {
+    const candidate = await sharp(pngBuffer)
+      .avif({ quality, effort: 4 })
+      .toBuffer();
+    if (candidate.length <= budgetBytes) {
+      // Higher quality first — accept the first that fits.
+      best = { buffer: candidate, quality };
+      break;
+    }
+  }
+  return best;
+};
+
+/**
+ * Build the four output variants for one screenshot. Returns
+ * `{ avif: Buffer, webp: Buffer, png: Buffer, thumb: Buffer,
+ *    width: number, height: number, avifQuality: number }` or throws if
+ * the AVIF budget cannot be met.
+ */
+export const buildImageVariants = async (
+  pngBuffer,
+  { budgetBytes, thumbnailWidth, id },
+) => {
+  const meta = await sharp(pngBuffer).metadata();
+  if (!meta.width || !meta.height) {
+    throw new Error(
+      `${id}: source PNG has no decodable dimensions (width=${meta.width}, height=${meta.height})`,
+    );
+  }
+  const avifResult = await encodeAvifWithinBudget(pngBuffer, budgetBytes);
+  if (!avifResult) {
+    throw new Error(
+      `${id}: AVIF budget regression — even quality=20 exceeds ${budgetBytes} bytes for source ${meta.width}x${meta.height}. Reduce the source dimensions or raise the budget with a deliberate justification recorded in the Sprint Log.`,
+    );
+  }
+  const webp = await sharp(pngBuffer).webp({ quality: 80 }).toBuffer();
+  const png = await sharp(pngBuffer)
+    .png({ compressionLevel: 9, palette: false })
+    .toBuffer();
+  const thumb = await sharp(pngBuffer)
+    .resize({ width: thumbnailWidth, withoutEnlargement: true })
+    .webp({ quality: 78 })
+    .toBuffer();
+  return {
+    avif: avifResult.buffer,
+    avifQuality: avifResult.quality,
+    webp,
+    png,
+    thumb,
+    width: meta.width,
+    height: meta.height,
+  };
+};
+
+const handleImageAllowlist = async ({
+  entry,
+  resolvedSource,
+  siteRoot,
+  devRepoRoot,
+  slugRegistry,
+}) => {
+  let raw;
+  try {
+    raw = await readFile(SCREENSHOT_ALLOWLIST_PATH, "utf8");
+  } catch (err) {
+    throw new Error(
+      `${entry.id}: screenshot allowlist unreadable at ${SCREENSHOT_ALLOWLIST_PATH}: ${err.message}`,
+    );
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    throw new Error(`${entry.id}: screenshot allowlist JSON parse failed: ${err.message}`);
+  }
+  const screenshots = Array.isArray(parsed.screenshots) ? parsed.screenshots : [];
+  if (screenshots.length === 0) {
+    throw new Error(`${entry.id}: screenshot allowlist has no 'screenshots' entries`);
+  }
+  const budgetBytes =
+    typeof parsed.avifBudgetBytes === "number" && parsed.avifBudgetBytes > 0
+      ? parsed.avifBudgetBytes
+      : DEFAULT_AVIF_BUDGET_BYTES;
+  const thumbnailWidth =
+    typeof parsed.thumbnailWidth === "number" && parsed.thumbnailWidth > 0
+      ? parsed.thumbnailWidth
+      : DEFAULT_THUMBNAIL_WIDTH;
+
+  const destinationRoot = resolve(siteRoot, entry.destination);
+  await mkdir(destinationRoot, { recursive: true });
+
+  const manifest = {};
+  const written = [];
+  for (const ss of screenshots) {
+    const { id, source, alt } = ss;
+    const priority = ss.priority === true;
+    if (typeof id !== "string" || id.length === 0) {
+      throw new Error(
+        `screenshot allowlist entry missing 'id': ${JSON.stringify(ss)}`,
+      );
+    }
+    if (!/^[a-z0-9][a-z0-9-]*$/.test(id)) {
+      throw new Error(
+        `screenshot allowlist 'id' must be kebab-case (a-z, 0-9, -): '${id}'`,
+      );
+    }
+    if (typeof alt !== "string" || alt.trim().length === 0) {
+      throw new Error(`${id}: screenshot allowlist entry needs a non-empty 'alt'`);
+    }
+    if (slugRegistry.has(id)) {
+      const other = slugRegistry.get(id);
+      throw new Error(
+        `id collision: '${id}' produced by both ${other} and ${source}`,
+      );
+    }
+    slugRegistry.set(id, source);
+
+    // Two-stage path resolution: (1) source resolves under devRepoRoot at
+    // all (defence against ../etc/passwd-style escapes), (2) source resolves
+    // under the sync-allowlist 'screenshots-final' boundary (defence against
+    // an allowlist that names a path outside the intended directory range).
+    const candidate = resolveSourcePath(devRepoRoot, source);
+    if (!candidate.startsWith(resolvedSource + sep) && candidate !== resolvedSource) {
+      throw new Error(
+        `${id}: source resolves outside the sync-allowlist 'screenshots-final' boundary: ${source} -> ${candidate}`,
+      );
+    }
+
+    let pngBuffer;
+    try {
+      pngBuffer = await readFile(candidate);
+    } catch (err) {
+      throw new Error(`${id}: source PNG read failed at ${candidate}: ${err.message}`);
+    }
+
+    let variants;
+    try {
+      variants = await buildImageVariants(pngBuffer, {
+        budgetBytes,
+        thumbnailWidth,
+        id,
+      });
+    } catch (err) {
+      throw new Error(err.message);
+    }
+
+    const avifPath = join(destinationRoot, `${id}.avif`);
+    const webpPath = join(destinationRoot, `${id}.webp`);
+    const pngPath = join(destinationRoot, `${id}.png`);
+    const thumbPath = join(destinationRoot, `${id}.thumb.webp`);
+    await writeFile(avifPath, variants.avif);
+    await writeFile(webpPath, variants.webp);
+    await writeFile(pngPath, variants.png);
+    await writeFile(thumbPath, variants.thumb);
+
+    manifest[id] = {
+      avif: `/screenshots/${id}.avif`,
+      webp: `/screenshots/${id}.webp`,
+      png: `/screenshots/${id}.png`,
+      thumb: `/screenshots/${id}.thumb.webp`,
+      width: variants.width,
+      height: variants.height,
+      alt,
+      priority,
+      sourceFile: basename(candidate),
+      avifQuality: variants.avifQuality,
+      avifBytes: variants.avif.length,
+    };
+    written.push({
+      slug: id,
+      sourceFile: basename(candidate),
+      destination: `${avifPath} (+webp +png +thumb)`,
+    });
+  }
+
+  const manifestPath = join(destinationRoot, "manifest.json");
+  await writeFile(
+    manifestPath,
+    JSON.stringify(manifest, null, 2) + "\n",
+    "utf8",
+  );
+
+  return written;
+};
+
 /* ─── entry dispatcher ──────────────────────────────────────────────────── */
 
 const KIND_HANDLERS = {
   "markdown-directory": handleMarkdownDirectory,
+  "image-allowlist": handleImageAllowlist,
 };
 
 const PENDING_KINDS = new Set([
-  "image-directory", // US-158
   "markdown-directory-with-frontmatter-gate", // US-159
   "markdown-file", // US-160
 ]);
@@ -330,7 +556,7 @@ const main = async (argv) => {
     process.exit(2);
   }
 
-  console.log(`sync-content (US-155 + US-156).`);
+  console.log(`sync-content (US-155 + US-156 + US-158).`);
   console.log(`  dev-repo root: ${opts.devRepoRoot}`);
   console.log(`  allowlist:     ${ALLOWLIST_PATH}`);
   console.log(`  sources:       ${sources.length}`);
@@ -357,6 +583,7 @@ const main = async (argv) => {
           entry,
           resolvedSource,
           siteRoot: SITE_REPO_ROOT,
+          devRepoRoot: opts.devRepoRoot,
           slugRegistry,
         });
         for (const w of written) {
