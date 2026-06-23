@@ -76,7 +76,7 @@ export const Footer = () => {
               </li>
               <li>
                 <a
-                  href="mailto:support@framepath.fi"
+                  href="/contact/"
                   className="text-graphite-300 transition-colors hover:text-ember-400 focus-visible:text-ember-400"
                 >
                   Contact
