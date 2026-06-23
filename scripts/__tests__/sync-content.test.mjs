@@ -18,6 +18,7 @@ import {
   slugFromFilename,
   slugFromHeading,
   slugifyHeadingText,
+  stripAllHtmlComments,
   stripDenyListedLinks,
   stripInternalComments,
   stripMarketingSkipSections,
@@ -741,5 +742,29 @@ describe("shiftHeadingsByOne (mputaala/Frame#282)", () => {
     expect(shiftHeadingsByOne("Look at #issue-282.")).toBe(
       "Look at #issue-282.",
     );
+  });
+});
+
+describe("stripAllHtmlComments (MDX 3 compatibility)", () => {
+  it("removes a simple single-line HTML comment", () => {
+    expect(stripAllHtmlComments("a <!-- comment --> b")).toBe("a  b");
+  });
+
+  it("removes a multi-line HTML comment", () => {
+    const md = "before\n<!-- line 1\nline 2 -->\nafter";
+    expect(stripAllHtmlComments(md)).toBe("before\n\nafter");
+  });
+
+  it("removes multiple HTML comments non-greedily", () => {
+    expect(stripAllHtmlComments("<!--a-->keep<!--b-->")).toBe("keep");
+  });
+
+  it("leaves regular markdown alone", () => {
+    const md = "# Title\n\nBody.\n";
+    expect(stripAllHtmlComments(md)).toBe(md);
+  });
+
+  it("doesn't touch a `<!` that isn't a comment opener", () => {
+    expect(stripAllHtmlComments("a < ! b")).toBe("a < ! b");
   });
 });

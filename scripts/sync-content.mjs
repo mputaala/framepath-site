@@ -227,6 +227,21 @@ export const stripScreenshotPlaceholders = (markdown) => {
 };
 
 /**
+ * Strip every remaining `<!-- ... -->` HTML comment from the
+ * markdown body. MDX 3 (under @next/mdx) does NOT support HTML
+ * comments — the parser rejects the leading `<!` as the start of an
+ * invalid JSX tag with the explicit hint that authors should use
+ * MDX-style braces-slash-star comments instead. Marketing-skip /
+ * internal / Screenshot markers are stripped by their dedicated
+ * transforms upstream of this one; any HTML comment that survives to
+ * this step is authoring commentary the public site shouldn't render
+ * anyway. Multi-line non-greedy.
+ */
+export const stripAllHtmlComments = (markdown) => {
+  return markdown.replace(/<!--[\s\S]*?-->/g, "");
+};
+
+/**
  * Increase every heading level by one — `# X` → `## X`, `## X` →
  * `### X`, etc. Used by handleMarkdownDirectoryCollated so each
  * chapter file's H1 becomes a chapter-H2 in the collated output,
@@ -381,7 +396,9 @@ const handleMarkdownDirectory = async ({
     slugRegistry.set(slug, fileName);
 
     const cleanedBody = escapeMdxUnsafeAngles(
-      normaliseAutolinks(stripDenyListedLinks(stripInternalComments(body))),
+      normaliseAutolinks(
+        stripDenyListedLinks(stripAllHtmlComments(stripInternalComments(body))),
+      ),
     );
 
     const meta = {
@@ -530,7 +547,11 @@ const handleMarkdownDirectoryWithFrontmatterGate = async ({
     const cleanedBody = escapeMdxUnsafeAngles(
       normaliseAutolinks(
         stripDenyListedLinks(
-          stripInternalComments(stripMarketingSkipSections(parsed.content)),
+          stripAllHtmlComments(
+            stripInternalComments(
+              stripMarketingSkipSections(parsed.content),
+            ),
+          ),
         ),
       ),
     );
@@ -628,7 +649,9 @@ const handleMarkdownFile = async ({
   const cleanedBody = escapeMdxUnsafeAngles(
     normaliseAutolinks(
       stripDenyListedLinks(
-        stripInternalComments(stripMarketingSkipSections(parsed.content)),
+        stripAllHtmlComments(
+          stripInternalComments(stripMarketingSkipSections(parsed.content)),
+        ),
       ),
     ),
   );
@@ -743,9 +766,11 @@ const handleMarkdownDirectoryCollated = async ({
       escapeMdxUnsafeAngles(
         normaliseAutolinks(
           stripDenyListedLinks(
-            stripScreenshotPlaceholders(
-              stripInternalComments(
-                stripMarketingSkipSections(parsed.content),
+            stripAllHtmlComments(
+              stripScreenshotPlaceholders(
+                stripInternalComments(
+                  stripMarketingSkipSections(parsed.content),
+                ),
               ),
             ),
           ),
