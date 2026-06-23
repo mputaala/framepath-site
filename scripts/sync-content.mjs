@@ -233,14 +233,23 @@ const findEffectiveDate = (markdown) => {
 /**
  * Build a frontmatter block from the metadata. YAML-style with double-quoted
  * string values so colons / em-dashes inside titles or dates don't break the
- * parser when the MDX layer reads it back.
+ * parser when the MDX layer reads it back. Booleans + numbers emit unquoted
+ * so gray-matter parses them as their native type — required by US-159
+ * which depends on `published: true` round-tripping as the JS literal
+ * Boolean (the strict gate in pages/features/[slug].tsx + getStaticProps).
  */
-const renderFrontmatter = (meta) => {
+export const renderFrontmatter = (meta) => {
   const escape = (s) => String(s).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
   const lines = ["---"];
   for (const [key, value] of Object.entries(meta)) {
     if (value === undefined || value === null) continue;
-    lines.push(`${key}: "${escape(value)}"`);
+    if (typeof value === "boolean") {
+      lines.push(`${key}: ${value ? "true" : "false"}`);
+    } else if (typeof value === "number" && Number.isFinite(value)) {
+      lines.push(`${key}: ${value}`);
+    } else {
+      lines.push(`${key}: "${escape(value)}"`);
+    }
   }
   lines.push("---", "");
   return lines.join("\n");

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import sharp from "sharp";
 
+import matter from "gray-matter";
+
 import {
   buildImageVariants,
   DEFAULT_AVIF_BUDGET_BYTES,
@@ -8,6 +10,7 @@ import {
   encodeAvifWithinBudget,
   isPublishedTrue,
   normaliseAutolinks,
+  renderFrontmatter,
   resolveSourcePath,
   slugFromFilename,
   slugFromHeading,
@@ -427,6 +430,52 @@ describe("slugFromFilename (US-159)", () => {
 
   it("rejects a filename that produces an empty slug", () => {
     expect(() => slugFromFilename("---.md")).toThrow(/empty slug/);
+  });
+});
+
+describe("renderFrontmatter (US-159 Boolean / number type fidelity)", () => {
+  it("renders a Boolean true as a YAML Boolean, not a quoted string", () => {
+    const out = renderFrontmatter({ published: true });
+    expect(out).toContain("published: true");
+    expect(out).not.toContain('published: "true"');
+  });
+
+  it("renders a Boolean false as a YAML Boolean", () => {
+    const out = renderFrontmatter({ published: false });
+    expect(out).toContain("published: false");
+    expect(out).not.toContain('published: "false"');
+  });
+
+  it("round-trips a Boolean through gray-matter as the literal JS Boolean", () => {
+    const md = renderFrontmatter({ published: true }) + "# Body\n";
+    const parsed = matter(md);
+    expect(parsed.data.published).toBe(true);
+    expect(typeof parsed.data.published).toBe("boolean");
+  });
+
+  it("round-trips Boolean false through gray-matter as the literal JS Boolean", () => {
+    const md = renderFrontmatter({ published: false }) + "# Body\n";
+    const parsed = matter(md);
+    expect(parsed.data.published).toBe(false);
+    expect(typeof parsed.data.published).toBe("boolean");
+  });
+
+  it("keeps string values quoted (colon-safe)", () => {
+    const out = renderFrontmatter({ title: "Privacy: Policy" });
+    expect(out).toContain('title: "Privacy: Policy"');
+  });
+
+  it("renders finite numbers unquoted", () => {
+    const out = renderFrontmatter({ version: 1 });
+    expect(out).toContain("version: 1");
+    expect(out).not.toContain('version: "1"');
+  });
+
+  it("skips undefined / null entries", () => {
+    const out = renderFrontmatter({ title: "x", empty: undefined, nothing: null });
+    expect(out).toContain("title:");
+    expect(out).not.toContain("empty:");
+    expect(out).not.toContain("nothing:");
   });
 });
 
