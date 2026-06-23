@@ -1,11 +1,12 @@
 import { Container } from "../components/Container";
+import { Screenshot } from "../components/mdx/Screenshot";
 
 type Feature = {
   stage: "Write" | "Plan" | "Shoot";
   title: string;
   description: string;
-  imageSrc: string;
-  imageAlt: string;
+  /** Logical id from config/screenshot-allowlist.json. */
+  screenshotId: string;
 };
 
 const FEATURES: Feature[] = [
@@ -14,24 +15,21 @@ const FEATURES: Feature[] = [
     title: "Write or import your screenplay.",
     description:
       "Each scene becomes a card you can break down element by element — action, dialogue, transitions, and the characters who appear.",
-    imageSrc: "/screenshots/feature-write.png",
-    imageAlt: "A screenshot of FramePath's script breakdown view.",
+    screenshotId: "write-mac",
   },
   {
     stage: "Plan",
     title: "Build a shot list and storyboard alongside the script.",
     description:
       "Sketch frames, add shot details, and track characters, locations, and props in one view — without leaving the scene you're planning.",
-    imageSrc: "/screenshots/feature-plan.png",
-    imageAlt: "A screenshot of FramePath's storyboard and shot list view.",
+    screenshotId: "plan-mac",
   },
   {
     stage: "Shoot",
     title: "Run the shoot from your iPad.",
     description:
       "Mark shots complete in shoot mode, capture reference photos for the editor, and keep the day moving without juggling spreadsheets.",
-    imageSrc: "/screenshots/feature-shoot.png",
-    imageAlt: "A screenshot of FramePath's shoot mode view.",
+    screenshotId: "shoot-ipad",
   },
 ];
 
@@ -57,13 +55,8 @@ export const Features = () => {
         <ul className="mt-16 grid gap-12 sm:gap-16 lg:grid-cols-3">
           {FEATURES.map((feature) => (
             <li key={feature.stage} className="flex flex-col">
-              <img
-                src={feature.imageSrc}
-                alt={feature.imageAlt}
-                width={1200}
-                height={800}
-                loading="lazy"
-                decoding="async"
+              <Screenshot
+                id={feature.screenshotId}
                 className="w-full rounded-xl border border-graphite-800"
               />
               <div className="mt-6 flex flex-col">
