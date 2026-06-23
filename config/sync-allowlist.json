@@ -7,7 +7,7 @@
       "source": "Documentation/Policies",
       "kind": "markdown-directory",
       "destination": "content/policies",
-      "notes": "Privacy_Policy.md and any future policies. Transform + write lands in US-156."
+      "notes": "Privacy_Policy.md and any future policies. US-156 transform: parse YAML frontmatter via gray-matter; if absent, synthesise { title, effectiveDate } from the first H1 and the first '**Effective date:** ...' line. Strip lines starting with '<!-- internal:'. Neutralise markdown links whose host matches *.cloudfunctions.net / console.firebase.google.com / mputaala.github.io/Frame (anchor text preserved as plain text). Compute slug from H1 with a trailing ' Policy' stripped before kebab-casing, so 'Privacy Policy' -> 'privacy'. Fail the build on missing / empty source files or slug collisions."
     },
     {
       "id": "screenshots-final",
