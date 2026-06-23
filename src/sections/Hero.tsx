@@ -40,14 +40,15 @@ export const Hero = () => {
           </div>
         </div>
 
-        {/* Hero screenshot. Explicit width / height attrs prevent CLS (US-154
-            edge case). Replaced by the US-158 image pipeline. */}
+        {/* DELIBERATE FAILURE — US-157 gate verification PR.
+            Removed width / height attributes to provoke a CLS regression
+            that should fail the Lighthouse cumulative-layout-shift assertion
+            (maxNumericValue: 0.1) and the categories:performance >= 0.95
+            assertion. This PR is expected to NEVER merge. */}
         <div className="relative mx-auto mt-16 max-w-5xl sm:mt-20">
           <img
             src="/screenshots/hero-placeholder.png"
             alt="A screenshot of the FramePath app showing a scene card grid alongside the script."
-            width={1600}
-            height={900}
             decoding="async"
             className="w-full rounded-2xl border border-graphite-800 shadow-2xl shadow-black/50"
           />
