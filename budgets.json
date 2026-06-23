@@ -1,0 +1,14 @@
+[
+  {
+    "path": "/",
+    "resourceSizes": [
+      { "resourceType": "total", "budget": 500 }
+    ]
+  },
+  {
+    "path": "/privacy/",
+    "resourceSizes": [
+      { "resourceType": "total", "budget": 200 }
+    ]
+  }
+]
