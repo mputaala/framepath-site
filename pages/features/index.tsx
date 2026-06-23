@@ -12,9 +12,9 @@ import path from "node:path";
 
 import matter from "gray-matter";
 import type { GetStaticProps } from "next";
-import Head from "next/head";
 
 import { Container } from "../../src/components/Container";
+import { SEO } from "../../src/components/SEO";
 import { Footer } from "../../src/sections/Footer";
 
 type FeatureSummary = {
@@ -35,16 +35,11 @@ const CANONICAL_URL = "https://framepath.fi/features/";
 const FeaturesIndex = ({ features }: FeaturesIndexProps) => {
   return (
     <>
-      <Head>
-        <title>{PAGE_TITLE}</title>
-        <meta name="description" content={PAGE_DESCRIPTION} />
-        <link rel="canonical" href={CANONICAL_URL} />
-        <meta property="og:title" content={PAGE_TITLE} />
-        <meta property="og:description" content={PAGE_DESCRIPTION} />
-        <meta property="og:url" content={CANONICAL_URL} />
-        <meta property="og:type" content="website" />
-        <meta name="twitter:card" content="summary" />
-      </Head>
+      <SEO
+        title={PAGE_TITLE}
+        description={PAGE_DESCRIPTION}
+        canonicalUrl={CANONICAL_URL}
+      />
       <main className="py-16 sm:py-20">
         <Container className="max-w-4xl">
           <header className="mx-auto max-w-2xl text-center">

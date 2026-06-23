@@ -11,12 +11,12 @@
 // /features uses, since the Help Book is a single fixed slug.
 
 import type { GetStaticProps } from "next";
-import Head from "next/head";
 
 import HelpContent from "../content/help/index.mdx";
 import { Container } from "../src/components/Container";
 import { HelpTOC, type HelpTocItem } from "../src/components/HelpTOC";
 import { Prose } from "../src/components/Prose";
+import { SEO } from "../src/components/SEO";
 import { Footer } from "../src/sections/Footer";
 
 type HelpPageProps = {
@@ -30,16 +30,12 @@ const CANONICAL_URL = "https://framepath.fi/help/";
 const HelpPage = ({ description, tocItems }: HelpPageProps) => {
   return (
     <>
-      <Head>
-        <title>{PAGE_TITLE}</title>
-        <meta name="description" content={description} />
-        <link rel="canonical" href={CANONICAL_URL} />
-        <meta property="og:title" content={PAGE_TITLE} />
-        <meta property="og:description" content={description} />
-        <meta property="og:url" content={CANONICAL_URL} />
-        <meta property="og:type" content="article" />
-        <meta name="twitter:card" content="summary" />
-      </Head>
+      <SEO
+        title={PAGE_TITLE}
+        description={description}
+        canonicalUrl={CANONICAL_URL}
+        ogType="article"
+      />
       <main className="py-16 sm:py-20">
         <Container className="max-w-6xl">
           <div className="lg:grid lg:grid-cols-[minmax(0,_1fr)_240px] lg:gap-12">

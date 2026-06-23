@@ -1,8 +1,8 @@
 import type { GetStaticProps } from "next";
-import Head from "next/head";
 
 import PrivacyContent from "../content/policies/privacy.mdx";
 import { Container } from "../src/components/Container";
+import { SEO } from "../src/components/SEO";
 import { Footer } from "../src/sections/Footer";
 import { Prose } from "../src/components/Prose";
 
@@ -16,16 +16,12 @@ const CANONICAL_URL = "https://framepath.fi/privacy/";
 const PrivacyPage = ({ description }: PrivacyPageProps) => {
   return (
     <>
-      <Head>
-        <title>{PAGE_TITLE}</title>
-        <meta name="description" content={description} />
-        <link rel="canonical" href={CANONICAL_URL} />
-        <meta property="og:title" content={PAGE_TITLE} />
-        <meta property="og:description" content={description} />
-        <meta property="og:url" content={CANONICAL_URL} />
-        <meta property="og:type" content="article" />
-        <meta name="twitter:card" content="summary" />
-      </Head>
+      <SEO
+        title={PAGE_TITLE}
+        description={description}
+        canonicalUrl={CANONICAL_URL}
+        ogType="article"
+      />
       <main className="py-16 sm:py-20">
         <Container className="max-w-3xl">
           <Prose>
