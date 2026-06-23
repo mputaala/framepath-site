@@ -1,14 +1,18 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveSourcePath } from "../sync-content.mjs";
+import {
+  resolveSourcePath,
+  slugFromHeading,
+  stripDenyListedLinks,
+  stripInternalComments,
+} from "../sync-content.mjs";
 
 // Use a Posix-style absolute path so the test is platform-deterministic on the
 // CI runner (Ubuntu) and the developer's Mac. The function under test calls
 // path.resolve(), which on macOS / Linux normalises against the Posix root.
 const FAKE_DEV_ROOT = "/tmp/fake-dev-repo";
 
-describe("resolveSourcePath", () => {
-  // US-155 AC #1: A source entry with '..' in the path is rejected.
+describe("resolveSourcePath (US-155 path-traversal guards)", () => {
   it("rejects a source containing '..'", () => {
     expect(() => resolveSourcePath(FAKE_DEV_ROOT, "../etc/passwd")).toThrow(
       /\.\./,
@@ -21,35 +25,18 @@ describe("resolveSourcePath", () => {
     ).toThrow(/\.\./);
   });
 
-  // US-155 AC #2: A source entry resolving to a parent of the dev-repo root
-  // is rejected. The '..' guard above already catches the common form; this
-  // case covers a hypothetical absolute path that would resolve into a
-  // sibling-of-root location after path.resolve() is applied.
   it("rejects a source whose resolved path sits outside the root", () => {
-    // path.resolve() treats a leading '/' as absolute, so this resolves to
-    // '/etc/passwd' regardless of the supplied root.
     expect(() => resolveSourcePath(FAKE_DEV_ROOT, "/etc/passwd")).toThrow(
       /outside dev-repo root/,
     );
   });
 
   it("rejects a sibling-directory escape that shares the root's prefix", () => {
-    // Root is /tmp/fake-dev-repo. If a naive `startsWith(root)` check were
-    // used (without the trailing separator), the candidate
-    // /tmp/fake-dev-repo-malicious/file would slip past. The separator suffix
-    // in the production code prevents this.
     expect(() =>
-      // Use path.resolve()-equivalent reasoning: the source must be relative,
-      // so we construct one that, after resolve, lands outside.
-      // Note: in practice the leading-slash path above already covers most of
-      // this surface, but this test asserts the suffix-separator guard
-      // explicitly with a hand-crafted target.
       resolveSourcePath("/tmp/fake-dev-repo", "/tmp/fake-dev-repo-malicious"),
     ).toThrow(/outside dev-repo root/);
   });
 
-  // US-155 AC #3: A source entry resolving to a permitted path returns the
-  // resolved absolute path.
   it("returns the absolute resolved path for a permitted source", () => {
     expect(resolveSourcePath(FAKE_DEV_ROOT, "Documentation/Policies")).toBe(
       "/tmp/fake-dev-repo/Documentation/Policies",
@@ -69,7 +56,6 @@ describe("resolveSourcePath", () => {
     ).toBe("/tmp/fake-dev-repo/Documentation/Guides/Apple Help Book.md");
   });
 
-  // Defensive cases.
   it("rejects an empty source", () => {
     expect(() => resolveSourcePath(FAKE_DEV_ROOT, "")).toThrow(/non-empty/);
   });
@@ -77,5 +63,124 @@ describe("resolveSourcePath", () => {
   it("rejects a non-string source", () => {
     // @ts-expect-error — deliberately wrong type.
     expect(() => resolveSourcePath(FAKE_DEV_ROOT, 42)).toThrow(/non-empty/);
+  });
+});
+
+describe("slugFromHeading (US-156)", () => {
+  it("drops the trailing ' Policy' suffix from 'Privacy Policy'", () => {
+    expect(slugFromHeading("Privacy Policy")).toBe("privacy");
+  });
+
+  it("drops trailing ' Policy' from a longer phrase", () => {
+    expect(slugFromHeading("Acceptable Use Policy")).toBe("acceptable-use");
+  });
+
+  it("kebab-cases multi-word headings without a Policy suffix", () => {
+    expect(slugFromHeading("Terms and Conditions")).toBe("terms-and-conditions");
+  });
+
+  it("lowercases mixed-case input", () => {
+    expect(slugFromHeading("Cookie Policy")).toBe("cookie");
+  });
+
+  it("collapses runs of punctuation into single dashes", () => {
+    expect(slugFromHeading("Privacy / Policy")).toBe("privacy");
+  });
+
+  it("trims leading and trailing dashes that fall out of normalisation", () => {
+    expect(slugFromHeading("  Privacy Policy  ")).toBe("privacy");
+  });
+
+  it("falls back to the full heading when stripping ' Policy' empties it", () => {
+    // 'Policy' on its own — the strip leaves an empty string, so the
+    // implementation falls back to the original input. 'Policy' kebab-cases
+    // to 'policy', which is what we want a hypothetical solo-named policy
+    // to produce rather than throwing.
+    expect(slugFromHeading("Policy")).toBe("policy");
+  });
+
+  it("rejects an empty heading", () => {
+    expect(() => slugFromHeading("")).toThrow(/non-empty/);
+  });
+
+  it("rejects a heading that produces an empty slug after normalisation", () => {
+    expect(() => slugFromHeading("---")).toThrow(/empty slug/);
+  });
+});
+
+describe("stripInternalComments (US-156)", () => {
+  it("removes lines that start with `<!-- internal:`", () => {
+    const md = [
+      "# Privacy",
+      "",
+      "<!-- internal: see Firestore rules at users/{uid} -->",
+      "Body line.",
+    ].join("\n");
+    expect(stripInternalComments(md)).not.toContain("internal:");
+    expect(stripInternalComments(md)).toContain("Body line.");
+  });
+
+  it("preserves ordinary HTML comments", () => {
+    const md = "# Title\n\n<!-- regular comment -->\nBody";
+    expect(stripInternalComments(md)).toContain("<!-- regular comment -->");
+  });
+
+  it("tolerates leading whitespace before the marker", () => {
+    const md = "   <!-- internal: indented -->\nBody";
+    expect(stripInternalComments(md)).toBe("Body");
+  });
+
+  it("does not strip lines where 'internal:' appears mid-line", () => {
+    const md = "Refer to the internal: docs.";
+    expect(stripInternalComments(md)).toBe(md);
+  });
+});
+
+describe("stripDenyListedLinks (US-156)", () => {
+  it("strips a *.cloudfunctions.net link, preserving anchor text", () => {
+    const md = "See the [ask_claude function](https://us-central1-myproj.cloudfunctions.net/ask_claude).";
+    expect(stripDenyListedLinks(md)).toBe("See the ask_claude function.");
+  });
+
+  it("strips a console.firebase.google.com link", () => {
+    const md = "Open the [Firebase console](https://console.firebase.google.com/project/foo).";
+    expect(stripDenyListedLinks(md)).toBe("Open the Firebase console.");
+  });
+
+  it("strips a mputaala.github.io/Frame link", () => {
+    const md = "See the [dev repo](https://mputaala.github.io/Frame/docs).";
+    expect(stripDenyListedLinks(md)).toBe("See the dev repo.");
+  });
+
+  it("leaves an mputaala.github.io link to a non-Frame path alone", () => {
+    const md = "See [my blog](https://mputaala.github.io/blog).";
+    expect(stripDenyListedLinks(md)).toBe(md);
+  });
+
+  it("leaves an arbitrary external link alone", () => {
+    const md = "See [Apple](https://www.apple.com/legal/privacy/).";
+    expect(stripDenyListedLinks(md)).toBe(md);
+  });
+
+  it("leaves relative links alone (no parseable URL)", () => {
+    const md = "See the [section](#contact) below.";
+    expect(stripDenyListedLinks(md)).toBe(md);
+  });
+
+  it("leaves mailto: links alone", () => {
+    const md = "Email [us](mailto:privacy@framepath.fi).";
+    expect(stripDenyListedLinks(md)).toBe(md);
+  });
+
+  it("handles multiple links in the same paragraph", () => {
+    const md = [
+      "See [Apple](https://www.apple.com/) and the",
+      "[old debug page](https://us-central1-x.cloudfunctions.net/debug)",
+      "before reporting.",
+    ].join(" ");
+    const out = stripDenyListedLinks(md);
+    expect(out).toContain("[Apple](https://www.apple.com/)");
+    expect(out).toContain("old debug page");
+    expect(out).not.toContain("cloudfunctions.net");
   });
 });
