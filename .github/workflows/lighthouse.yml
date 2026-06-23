@@ -1,0 +1,152 @@
+name: Lighthouse CI
+
+# US-157 / Sprint 28 -- Lighthouse + axe-core PR gate. Runs on every PR to
+# main, fails the merge button if either tool reports a regression below
+# the budgets in lighthouserc.json + budgets.json.
+#
+# Why two gates: Lighthouse catches the common ~80% of accessibility issues
+# (color contrast, label-content-mismatch, missing ARIA roles, etc.); axe-core
+# catches additional ARIA-correctness checks Lighthouse misses. Running both
+# is cheap on Linux runners.
+#
+# Action SHA pins (per the SHA-pinning convention in CONTRIBUTING.md):
+#   actions/checkout@v7.0.0                                -> 9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+#   actions/setup-node@v6.4.0                              -> 48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+#   treosh/lighthouse-ci-action@12.6.2                     -> 3e7e23fb74242897f95c0ba9cabad3d0227b9b18
+#   actions/upload-artifact@v7.0.1                         -> 043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+#   peter-evans/find-comment@v4.0.0                        -> b30e6a3c0ed37e7c023ccd3f1db5c6c0b0c23aad
+#   peter-evans/create-or-update-comment@v5.0.0            -> e8674b075228eee787fea43ef493e45ece1004c9
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: lighthouse-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lighthouse-ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout site repo
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+
+      - name: Checkout dev repo (read-only, sparse) for content sync
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        with:
+          repository: mputaala/Frame
+          token: ${{ secrets.FRAME_CONTENT_TOKEN }}
+          path: dev-content
+          sparse-checkout: |
+            Documentation/Policies
+            Documentation/User Guide/Assets/Screenshots/Final
+            Documentation/Features
+            Documentation/Guides/Apple Help Book.md
+          sparse-checkout-cone-mode: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6.4.0
+        with:
+          node-version-file: ".nvmrc"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run sync-content
+        run: node scripts/sync-content.mjs --dev-repo dev-content
+
+      - name: Build static export
+        run: npm run build
+
+      - name: Lighthouse CI (collect + assert + upload)
+        id: lhci
+        uses: treosh/lighthouse-ci-action@3e7e23fb74242897f95c0ba9cabad3d0227b9b18  # v12.6.2
+        with:
+          configPath: ./lighthouserc.json
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+
+      - name: Start local static server (for axe-core)
+        # The lhci action stops its own server after `lhci collect`; we need
+        # one running for @axe-core/cli's URL crawl. & + sleep + curl wait so
+        # axe doesn't race against the server's startup.
+        run: |
+          npx --yes serve out -l 4173 &
+          for i in 1 2 3 4 5 6 7 8; do
+            if curl -sf http://localhost:4173/ > /dev/null; then break; fi
+            sleep 1
+          done
+
+      - name: Run axe-core (WCAG 2.1 AA)
+        # `--exit` makes axe return non-zero on violations.
+        # Capture stdout AND stderr into the JSON so artefact retention covers
+        # any subsequent debugging.
+        run: |
+          mkdir -p axe-output
+          npx --yes @axe-core/cli@4.11.3 \
+            http://localhost:4173/ http://localhost:4173/privacy/ \
+            --tags wcag2a,wcag2aa,wcag21a,wcag21aa \
+            --save axe-output/results.json \
+            --exit 2>&1 | tee axe-output/log.txt
+
+      - name: Upload axe-core artefacts (retained 30 days)
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: axe-core-${{ github.run_id }}
+          path: axe-output/
+          retention-days: 30
+
+      - name: Find existing Lighthouse summary comment
+        if: always() && github.event.pull_request.number
+        id: find-lh-comment
+        uses: peter-evans/find-comment@b30e6a3c0ed37e7c023ccd3f1db5c6c0b0c23aad  # v4.0.0
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: "github-actions[bot]"
+          body-includes: "<!-- lighthouse-summary -->"
+
+      - name: Compose Lighthouse summary body
+        if: always() && github.event.pull_request.number
+        id: compose
+        run: |
+          BODY_PATH=$(mktemp)
+          {
+            echo '<!-- lighthouse-summary -->'
+            echo '## Lighthouse CI summary'
+            echo
+            echo 'Lighthouse + axe-core PR gate (US-157).'
+            echo
+            if [ -n '${{ steps.lhci.outputs.links }}' ]; then
+              echo '**Lighthouse reports:**'
+              echo '${{ steps.lhci.outputs.links }}'
+              echo
+            fi
+            if [ -n '${{ steps.lhci.outputs.assertionResults }}' ]; then
+              echo '<details><summary>Assertion results</summary>'
+              echo
+              echo '```json'
+              echo '${{ steps.lhci.outputs.assertionResults }}'
+              echo '```'
+              echo
+              echo '</details>'
+            fi
+            echo
+            echo '_axe-core results (JSON) attached as workflow artefact `axe-core-${{ github.run_id }}` (retained 30 days)._'
+          } > "$BODY_PATH"
+          echo "body_path=$BODY_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Post / update Lighthouse summary on PR
+        if: always() && github.event.pull_request.number
+        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9  # v5.0.0
+        with:
+          comment-id: ${{ steps.find-lh-comment.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body-path: ${{ steps.compose.outputs.body_path }}
+          edit-mode: replace
