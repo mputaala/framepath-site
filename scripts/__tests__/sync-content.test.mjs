@@ -9,12 +9,14 @@ import {
   DEFAULT_THUMBNAIL_WIDTH,
   encodeAvifWithinBudget,
   escapeMdxUnsafeAngles,
+  extractH2Toc,
   isPublishedTrue,
   normaliseAutolinks,
   renderFrontmatter,
   resolveSourcePath,
   slugFromFilename,
   slugFromHeading,
+  slugifyHeadingText,
   stripDenyListedLinks,
   stripInternalComments,
   stripMarketingSkipSections,
@@ -583,5 +585,87 @@ describe("stripMarketingSkipSections (US-159)", () => {
   it("returns input unchanged when there are no marketing-skip blocks", () => {
     const md = "# Title\n\nBody.";
     expect(stripMarketingSkipSections(md)).toBe(md);
+  });
+});
+
+/* ─── US-160 Help Book TOC ──────────────────────────────────────────────── */
+
+describe("slugifyHeadingText (US-160)", () => {
+  it("kebab-cases a heading with spaces", () => {
+    expect(slugifyHeadingText("Adding Visuals")).toBe("adding-visuals");
+  });
+
+  it("lowercases mixed-case headings", () => {
+    expect(slugifyHeadingText("File Structure Reference")).toBe(
+      "file-structure-reference",
+    );
+  });
+
+  it("collapses punctuation runs into single dashes", () => {
+    expect(slugifyHeadingText("Updating, Help — Content")).toBe(
+      "updating-help-content",
+    );
+  });
+
+  it("trims leading and trailing dashes", () => {
+    expect(slugifyHeadingText("  Purpose  ")).toBe("purpose");
+  });
+
+  it("returns empty for punctuation-only headings", () => {
+    expect(slugifyHeadingText("---")).toBe("");
+  });
+
+  it("throws on a non-string input", () => {
+    expect(() => slugifyHeadingText(42)).toThrow(/string/);
+  });
+});
+
+describe("extractH2Toc (US-160)", () => {
+  it("returns one entry per H2 in document order", () => {
+    const md = [
+      "# Help",
+      "",
+      "## Purpose",
+      "",
+      "Body.",
+      "",
+      "## Adding Visuals",
+      "",
+      "### 1. Prepare the image",
+      "",
+      "## Updating Help Content",
+      "",
+    ].join("\n");
+    const toc = extractH2Toc(md);
+    expect(toc).toEqual([
+      { title: "Purpose", slug: "purpose" },
+      { title: "Adding Visuals", slug: "adding-visuals" },
+      { title: "Updating Help Content", slug: "updating-help-content" },
+    ]);
+  });
+
+  it("ignores H1 and H3 lines", () => {
+    const md = "# H1\n\n### H3\n\n## H2";
+    expect(extractH2Toc(md)).toEqual([{ title: "H2", slug: "h2" }]);
+  });
+
+  it("suffixes a numeric counter on slug collision", () => {
+    const md = ["## Setup", "", "## Setup", "", "## Setup"].join("\n");
+    expect(extractH2Toc(md)).toEqual([
+      { title: "Setup", slug: "setup" },
+      { title: "Setup", slug: "setup-2" },
+      { title: "Setup", slug: "setup-3" },
+    ]);
+  });
+
+  it("returns [] when no H2 is present", () => {
+    expect(extractH2Toc("# Only H1\n\nBody.")).toEqual([]);
+  });
+
+  it("skips an H2 whose title slugifies to empty", () => {
+    const md = "## ---\n\n## Real Heading";
+    expect(extractH2Toc(md)).toEqual([
+      { title: "Real Heading", slug: "real-heading" },
+    ]);
   });
 });

@@ -64,7 +64,16 @@
 //       start so a previously-published feature flipped to
 //       published: false (or deleted upstream) disappears on the next
 //       sync, not just for the current sync's writes.
-//   - markdown-file        (US-160, deferred): logged as PENDING.
+//   - markdown-file        (US-160, Apple Help Book):
+//       Reads a single .md source. Applies the standard body transform
+//       chain (stripMarketingSkipSections → stripInternalComments →
+//       stripDenyListedLinks → normaliseAutolinks → escapeMdxUnsafeAngles).
+//       Renders frontmatter from { title (from H1), sourceFile } and
+//       writes to <destination>. Also extracts an H2 list to
+//       <destination-dir>/toc.json so the Help Book page's sticky TOC
+//       component can render without re-parsing MDX at runtime. Slugs use
+//       the same kebab-case algorithm as <h2> components on the page so
+//       in-page anchors resolve.
 //
 // Usage:
 //   node scripts/sync-content.mjs --dev-repo <path-to-dev-repo-checkout>
@@ -516,6 +525,116 @@ const handleMarkdownDirectoryWithFrontmatterGate = async ({
   return written;
 };
 
+/* ─── markdown-file transform (US-160, Help Book) ───────────────────────── */
+
+/**
+ * Convert a heading text into a kebab-case slug. Must match the algorithm
+ * the page's <h2> component uses so the toc.json slugs and the rendered
+ * heading ids align (otherwise the in-page anchor + active-section
+ * highlighting break).
+ */
+export const slugifyHeadingText = (text) => {
+  if (typeof text !== "string") {
+    throw new Error("slugifyHeadingText: input must be a string");
+  }
+  const slug = text
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug;
+};
+
+/**
+ * Extract every H2 heading from a markdown body. Returns an array of
+ * `{ title, slug }` ordered by appearance. Slugs are unique by appending
+ * a numeric suffix on collision (`adding-visuals`, `adding-visuals-2`, …).
+ */
+export const extractH2Toc = (markdown) => {
+  const items = [];
+  const seen = new Map();
+  const lines = markdown.split(/\r?\n/);
+  for (const line of lines) {
+    const match = line.match(/^##\s+(.+?)\s*$/);
+    if (!match) continue;
+    const title = match[1].trim();
+    if (title.length === 0) continue;
+    const base = slugifyHeadingText(title);
+    if (base.length === 0) continue;
+    const count = seen.get(base) ?? 0;
+    const slug = count === 0 ? base : `${base}-${count + 1}`;
+    seen.set(base, count + 1);
+    items.push({ title, slug });
+  }
+  return items;
+};
+
+const handleMarkdownFile = async ({
+  entry,
+  resolvedSource,
+  siteRoot,
+}) => {
+  let raw;
+  try {
+    raw = await readFile(resolvedSource, "utf8");
+  } catch (err) {
+    throw new Error(
+      `${entry.id ?? entry.source}: source unreadable: ${err.message}`,
+    );
+  }
+  if (raw.trim().length === 0) {
+    throw new Error(`${entry.id ?? entry.source}: source file is empty`);
+  }
+
+  const parsed = matter(raw);
+  const fm = parsed.data ?? {};
+  const title = fm.title ?? findFirstH1(parsed.content);
+  if (!title) {
+    throw new Error(
+      `${entry.id ?? entry.source}: cannot derive title — no YAML frontmatter and no H1`,
+    );
+  }
+
+  const cleanedBody = escapeMdxUnsafeAngles(
+    normaliseAutolinks(
+      stripDenyListedLinks(
+        stripInternalComments(stripMarketingSkipSections(parsed.content)),
+      ),
+    ),
+  );
+
+  const destPath = resolve(siteRoot, entry.destination);
+  const destDir = dirname(destPath);
+  // Clean rebuild so a deleted upstream source doesn't leave a stale .mdx
+  // or toc.json behind.
+  await rm(destDir, { recursive: true, force: true });
+  await mkdir(destDir, { recursive: true });
+
+  const meta = {
+    title,
+    sourceFile: basename(resolvedSource),
+  };
+  const out = renderFrontmatter(meta) + cleanedBody.replace(/^\s+/, "");
+  await writeFile(destPath, out, "utf8");
+
+  const tocItems = extractH2Toc(cleanedBody);
+  const tocPath = join(destDir, "toc.json");
+  await writeFile(
+    tocPath,
+    JSON.stringify({ items: tocItems }, null, 2) + "\n",
+    "utf8",
+  );
+
+  return [
+    {
+      slug: basename(destPath, ".mdx"),
+      sourceFile: basename(resolvedSource),
+      destination: `${destPath} (+ ${tocItems.length}-entry toc.json)`,
+    },
+  ];
+};
+
 /* ─── image-allowlist transform (US-158, Screenshots) ───────────────────── */
 
 /**
@@ -721,10 +840,11 @@ const KIND_HANDLERS = {
   "image-allowlist": handleImageAllowlist,
   "markdown-directory-with-frontmatter-gate":
     handleMarkdownDirectoryWithFrontmatterGate,
+  "markdown-file": handleMarkdownFile,
 };
 
 const PENDING_KINDS = new Set([
-  "markdown-file", // US-160
+  // No deferred kinds remaining — all four allowlist sources are live.
 ]);
 
 /* ─── main CLI ──────────────────────────────────────────────────────────── */
@@ -761,7 +881,7 @@ const main = async (argv) => {
     process.exit(2);
   }
 
-  console.log(`sync-content (US-155 + US-156 + US-158 + US-159).`);
+  console.log(`sync-content (US-155 + US-156 + US-158 + US-159 + US-160).`);
   console.log(`  dev-repo root: ${opts.devRepoRoot}`);
   console.log(`  allowlist:     ${ALLOWLIST_PATH}`);
   console.log(`  sources:       ${sources.length}`);
