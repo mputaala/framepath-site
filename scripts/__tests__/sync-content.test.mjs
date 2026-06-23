@@ -8,6 +8,7 @@ import {
   DEFAULT_AVIF_BUDGET_BYTES,
   DEFAULT_THUMBNAIL_WIDTH,
   encodeAvifWithinBudget,
+  escapeMdxBraces,
   escapeMdxUnsafeAngles,
   extractH2Toc,
   isPublishedTrue,
@@ -766,5 +767,54 @@ describe("stripAllHtmlComments (MDX 3 compatibility)", () => {
 
   it("doesn't touch a `<!` that isn't a comment opener", () => {
     expect(stripAllHtmlComments("a < ! b")).toBe("a < ! b");
+  });
+});
+
+describe("escapeMdxBraces (MDX 3 compatibility)", () => {
+  it("escapes `{` and `}` in prose", () => {
+    expect(escapeMdxBraces("Use *{Project Name}.fountain*.")).toBe(
+      "Use *\\{Project Name\\}.fountain*.",
+    );
+  });
+
+  it("escapes braces inside italic placeholders", () => {
+    expect(escapeMdxBraces("*{Name}* and *{Query}*")).toBe(
+      "*\\{Name\\}* and *\\{Query\\}*",
+    );
+  });
+
+  it("leaves braces inside fenced code blocks alone", () => {
+    const md = [
+      "Before {brace}.",
+      "```ts",
+      "const x = { a: 1 };",
+      "```",
+      "After {brace}.",
+    ].join("\n");
+    const expected = [
+      "Before \\{brace\\}.",
+      "```ts",
+      "const x = { a: 1 };",
+      "```",
+      "After \\{brace\\}.",
+    ].join("\n");
+    expect(escapeMdxBraces(md)).toBe(expected);
+  });
+
+  it("handles a code block with leading whitespace fence", () => {
+    const md = [
+      "   ```js",
+      "const x = { y: 1 };",
+      "   ```",
+      "{escape}",
+    ].join("\n");
+    expect(escapeMdxBraces(md)).toContain("const x = { y: 1 };");
+    expect(escapeMdxBraces(md)).toContain("\\{escape\\}");
+  });
+
+  it("returns input unchanged when there are no braces", () => {
+    expect(escapeMdxBraces("Plain markdown.\n## H2.")).toBe(
+      "Plain markdown.\n## H2.",
+    );
   });
 });

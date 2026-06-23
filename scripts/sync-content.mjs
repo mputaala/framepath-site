@@ -242,6 +242,39 @@ export const stripAllHtmlComments = (markdown) => {
 };
 
 /**
+ * Escape `{` and `}` in prose so MDX doesn't try to parse them as JSX
+ * expressions. The dev-repo User Guide chapter docs use brace
+ * placeholders in italics — `*{Project Name}.fountain*`, `*{Name}*` —
+ * which acorn rejects as invalid JS. Fenced code blocks are
+ * deliberately exempted (inside a code block, `\{` would render as a
+ * visible backslash).
+ *
+ * Implementation walks the markdown line by line, toggling a
+ * `inFencedCode` flag on lines that start (or end) with the
+ * triple-backtick fence. Outside fenced blocks, every `{` becomes
+ * `\{` and every `}` becomes `\}`. Inside fenced blocks the line is
+ * passed through verbatim.
+ */
+export const escapeMdxBraces = (markdown) => {
+  const lines = markdown.split(/\r?\n/);
+  let inFencedCode = false;
+  const out = [];
+  for (const line of lines) {
+    if (/^\s*```/.test(line)) {
+      inFencedCode = !inFencedCode;
+      out.push(line);
+      continue;
+    }
+    if (inFencedCode) {
+      out.push(line);
+      continue;
+    }
+    out.push(line.replace(/[{}]/g, (c) => `\\${c}`));
+  }
+  return out.join("\n");
+};
+
+/**
  * Increase every heading level by one — `# X` → `## X`, `## X` →
  * `### X`, etc. Used by handleMarkdownDirectoryCollated so each
  * chapter file's H1 becomes a chapter-H2 in the collated output,
@@ -395,9 +428,11 @@ const handleMarkdownDirectory = async ({
     }
     slugRegistry.set(slug, fileName);
 
-    const cleanedBody = escapeMdxUnsafeAngles(
-      normaliseAutolinks(
-        stripDenyListedLinks(stripAllHtmlComments(stripInternalComments(body))),
+    const cleanedBody = escapeMdxBraces(
+      escapeMdxUnsafeAngles(
+        normaliseAutolinks(
+          stripDenyListedLinks(stripAllHtmlComments(stripInternalComments(body))),
+        ),
       ),
     );
 
@@ -544,12 +579,14 @@ const handleMarkdownDirectoryWithFrontmatterGate = async ({
     }
     slugRegistry.set(slug, fileName);
 
-    const cleanedBody = escapeMdxUnsafeAngles(
-      normaliseAutolinks(
-        stripDenyListedLinks(
-          stripAllHtmlComments(
-            stripInternalComments(
-              stripMarketingSkipSections(parsed.content),
+    const cleanedBody = escapeMdxBraces(
+      escapeMdxUnsafeAngles(
+        normaliseAutolinks(
+          stripDenyListedLinks(
+            stripAllHtmlComments(
+              stripInternalComments(
+                stripMarketingSkipSections(parsed.content),
+              ),
             ),
           ),
         ),
@@ -646,11 +683,13 @@ const handleMarkdownFile = async ({
     );
   }
 
-  const cleanedBody = escapeMdxUnsafeAngles(
-    normaliseAutolinks(
-      stripDenyListedLinks(
-        stripAllHtmlComments(
-          stripInternalComments(stripMarketingSkipSections(parsed.content)),
+  const cleanedBody = escapeMdxBraces(
+    escapeMdxUnsafeAngles(
+      normaliseAutolinks(
+        stripDenyListedLinks(
+          stripAllHtmlComments(
+            stripInternalComments(stripMarketingSkipSections(parsed.content)),
+          ),
         ),
       ),
     ),
@@ -763,13 +802,15 @@ const handleMarkdownDirectoryCollated = async ({
 
     const parsed = matter(raw);
     const cleaned = shiftHeadingsByOne(
-      escapeMdxUnsafeAngles(
-        normaliseAutolinks(
-          stripDenyListedLinks(
-            stripAllHtmlComments(
-              stripScreenshotPlaceholders(
-                stripInternalComments(
-                  stripMarketingSkipSections(parsed.content),
+      escapeMdxBraces(
+        escapeMdxUnsafeAngles(
+          normaliseAutolinks(
+            stripDenyListedLinks(
+              stripAllHtmlComments(
+                stripScreenshotPlaceholders(
+                  stripInternalComments(
+                    stripMarketingSkipSections(parsed.content),
+                  ),
                 ),
               ),
             ),
