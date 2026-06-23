@@ -83,12 +83,20 @@ jobs:
             sleep 1
           done
 
+      - name: Install matching Chrome / ChromeDriver for axe-core
+        # @axe-core/cli's bundled ChromeDriver pins to the latest stable
+        # Chrome; ubuntu-latest sometimes lags by one release, breaking the
+        # session-create handshake. browser-driver-manager re-syncs them.
+        run: npx --yes browser-driver-manager install chrome
+
       - name: Run axe-core (WCAG 2.1 AA)
-        # `--exit` makes axe return non-zero on violations.
-        # Capture stdout AND stderr into the JSON so artefact retention covers
-        # any subsequent debugging.
+        # `--exit` makes axe return non-zero on violations. The shell uses
+        # PIPESTATUS to propagate axe's exit code through the `tee` pipe
+        # (otherwise the pipe's exit code is tee's, and a real failure looks
+        # green).
         run: |
           mkdir -p axe-output
+          set -o pipefail
           npx --yes @axe-core/cli@4.11.3 \
             http://localhost:4173/ http://localhost:4173/privacy/ \
             --tags wcag2a,wcag2aa,wcag21a,wcag21aa \
