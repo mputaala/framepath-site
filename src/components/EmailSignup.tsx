@@ -154,15 +154,22 @@ export const EmailSignup = ({ variant = "hero" }: EmailSignupProps) => {
       }
     >
       <div className="mb-3">
-        <h3
-          className={
-            variant === "hero"
-              ? "text-lg font-semibold text-graphite-50"
-              : "text-sm font-semibold uppercase tracking-[0.18em] text-graphite-50"
-          }
-        >
-          {variant === "hero" ? HERO_HEADLINE : FOOTER_HEADLINE}
-        </h3>
+        {variant === "hero" ? (
+          // <p> not <h-N>: the hero already opens with the page H1
+          // ("Plan the shoot. Direct your story."), and the next true
+          // section heading is the Features H2. Adding an H3 here would
+          // skip H2 and fail Lighthouse a11y's heading-order audit. The
+          // styled <p> reads identically to a sighted user.
+          <p className="text-lg font-semibold text-graphite-50">
+            {HERO_HEADLINE}
+          </p>
+        ) : (
+          // Footer variant renders below the Features H3 cards, so an
+          // H3 here continues the existing same-level hierarchy.
+          <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-graphite-50">
+            {FOOTER_HEADLINE}
+          </h3>
+        )}
         <p className="mt-1 text-sm text-graphite-300">
           {variant === "hero" ? HERO_BLURB : FOOTER_BLURB}
         </p>

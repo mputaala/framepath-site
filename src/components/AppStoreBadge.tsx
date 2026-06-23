@@ -47,7 +47,13 @@ export const AppStoreBadge = ({ href, className = "" }: AppStoreBadgeProps) => {
       </svg>
       <span className="flex flex-col leading-tight">
         <span className="text-[10px] font-medium uppercase tracking-wider">
-          Download on the
+          {/* Trailing space inside this span so the textContent of the
+              outer <a> reads "Download on the App Store" — with the space
+              that the aria-label has. Without it, the two adjacent
+              flex-children render as "Download on theApp Store" in the
+              accessibility tree, which axe's label-content-name-mismatch
+              rule flags as a divergence from the aria-label. */}
+          {"Download on the "}
         </span>
         <span className="text-xl font-semibold tracking-extra-tight">
           App Store
