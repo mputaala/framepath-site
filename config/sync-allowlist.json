@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "description": "Allowlist of source paths inside the dev-repo checkout that sync-content.mjs is permitted to read. Anything not on this list is invisible to the build. The dev-repo checkout's root is referenced as the sync-script's --dev-repo argument; every entry's 'source' is relative to that root.",
+  "sources": [
+    {
+      "id": "policies",
+      "source": "Documentation/Policies",
+      "kind": "markdown-directory",
+      "destination": "content/policies",
+      "notes": "Privacy_Policy.md and any future policies. Transform + write lands in US-156."
+    },
+    {
+      "id": "screenshots-final",
+      "source": "Documentation/User Guide/Assets/Screenshots/Final",
+      "kind": "image-directory",
+      "destination": "public/screenshots",
+      "notes": "Curated PNG screenshots. Sharp-driven AVIF/WebP/PNG triplet pipeline lands in US-158; per-screenshot allowlist file at config/screenshot-allowlist.json drives selection."
+    },
+    {
+      "id": "features",
+      "source": "Documentation/Features",
+      "kind": "markdown-directory-with-frontmatter-gate",
+      "destination": "content/features",
+      "notes": "Only files with frontmatter `published: true` are copied. Frontmatter gate lands in US-159."
+    },
+    {
+      "id": "help-book",
+      "source": "Documentation/Guides/Apple Help Book.md",
+      "kind": "markdown-file",
+      "destination": "content/help/index.mdx",
+      "notes": "Apple Help Book renders as a single page with H2-anchored sections. Transform lands in US-160."
+    }
+  ]
+}

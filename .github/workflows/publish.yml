@@ -1,0 +1,118 @@
+name: Publish to GitHub Pages
+
+# US-155 / Sprint 28 — Prompt 6 — the unified site-build workflow. Replaces
+# deploy.yml's role (Sprint 28 placeholder + US-154 minimal-scaffold deploy)
+# with a sync-then-build-then-deploy chain that consumes content from the
+# private dev repo (mputaala/Frame) via the read-only FRAME_CONTENT_TOKEN.
+#
+# Triggers:
+# - workflow_dispatch (typed commit_sha input) — fired by sync-trigger.yml
+#   in the dev repo when an allowlisted documentation path changes on main.
+# - workflow_dispatch (no input) — manual rebuild from the GitHub UI.
+# - push to main — site-repo scaffold / config changes.
+#
+# Dispatch payload semantics: the originating commit SHA is LOGGED for
+# audit-trail purposes only. The allowlist that actually drives what gets
+# synced is config/sync-allowlist.json in this repo, fetched via
+# actions/checkout's sparse-checkout of mputaala/Frame. The dispatch payload
+# is never trusted as input to the sync step.
+#
+# Token: ${{ secrets.FRAME_CONTENT_TOKEN }} — fine-grained PAT scoped to
+#   `Contents: Read` + `Metadata: Read` on mputaala/Frame only. Cannot write
+#   anything to the dev repo. Created 2026-06-23, expires 2026-09-21.
+#
+# Dispatch mechanism rationale (workflow_dispatch, not repository_dispatch):
+#   See sync-trigger.yml in mputaala/Frame and the US-155 Notes section.
+#
+# Action SHA pins (per the SHA-pinning convention from US-157):
+#   actions/checkout@v7.0.0              -> 9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+#   actions/setup-node@v6.4.0            -> 48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+#   actions/configure-pages@v6.0.0       -> 45bfe0192ca1faeb007ade9deae92b16b8254a0d
+#   actions/upload-pages-artifact@v5.0.0 -> fc324d3547104276b827a68afc52ff2a11cc49c9
+#   actions/deploy-pages@v5.0.0          -> cd2ce8fcbc39b97be8ca5fce6e763baed58fa128
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit_sha:
+        description: "Originating commit SHA from the dev repo (audit-trail only)."
+        required: false
+        default: ""
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One in-flight Pages deploy; queue follow-up runs rather than cancelling.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log dispatch context (audit only)
+        run: |
+          echo "Trigger event:       ${{ github.event_name }}"
+          echo "Dispatched ref:      ${{ github.ref }}"
+          echo "Site-repo SHA:       ${{ github.sha }}"
+          echo "Dev-repo commit SHA: ${{ github.event.inputs.commit_sha }}"
+          echo "(The commit_sha above is logged for audit only; sync is driven by config/sync-allowlist.json, not the dispatch payload.)"
+
+      - name: Checkout site repo
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+
+      - name: Checkout dev repo (read-only, sparse)
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        with:
+          repository: mputaala/Frame
+          token: ${{ secrets.FRAME_CONTENT_TOKEN }}
+          path: dev-content
+          # Sparse-checkout limits what's downloaded over the wire to the
+          # four allowlisted documentation paths. The sync script's allowlist
+          # is the second line of defence: only entries in that file are
+          # copied into the build, regardless of what else might be present.
+          sparse-checkout: |
+            Documentation/Policies
+            Documentation/User Guide/Assets/Screenshots/Final
+            Documentation/Features
+            Documentation/Guides/Apple Help Book.md
+          sparse-checkout-cone-mode: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6.4.0
+        with:
+          node-version-file: ".nvmrc"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run sync-content (stub in this prompt; real transforms land in US-156+)
+        run: node scripts/sync-content.mjs --dev-repo dev-content
+
+      - name: Build static export
+        run: npm run build
+
+      - name: Configure Pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d  # v6.0.0
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9  # v5.0.0
+        with:
+          path: ./out
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128  # v5.0.0
