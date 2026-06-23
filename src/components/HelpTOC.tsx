@@ -87,7 +87,7 @@ export const HelpTOC = ({ items }: HelpTOCProps) => {
         id="help-toc-list"
         className={`${isMobileOpen ? "block" : "hidden"} mt-3 space-y-1 lg:mt-0 lg:block`}
       >
-        <li className="hidden text-xs font-semibold uppercase tracking-[0.18em] text-graphite-400 lg:block">
+        <li className="hidden px-3 pb-2 text-xs font-semibold uppercase tracking-[0.18em] text-graphite-300 lg:block">
           On this page
         </li>
         {items.map((item) => {

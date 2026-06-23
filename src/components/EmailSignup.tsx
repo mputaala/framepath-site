@@ -155,20 +155,22 @@ export const EmailSignup = ({ variant = "hero" }: EmailSignupProps) => {
     >
       <div className="mb-3">
         {variant === "hero" ? (
-          // <p> not <h-N>: the hero already opens with the page H1
-          // ("Plan the shoot. Direct your story."), and the next true
-          // section heading is the Features H2. Adding an H3 here would
-          // skip H2 and fail Lighthouse a11y's heading-order audit. The
-          // styled <p> reads identically to a sighted user.
+          // <p> not <h-N>: avoids the H1 → H3 heading-order skip that
+          // Lighthouse a11y flagged when the EmailSignup was first
+          // shipped under the hero (PR #24 / US-161 Prompt 6 history).
+          // Sprint 29 Prompt 9 (PR #27) extended the same fix to the
+          // footer variant — on minimal pages like /contact the footer
+          // signup lives directly after the page H1 with no intermediate
+          // H2, so the H3 form headline reintroduced the same skip
+          // there. Styled <p> reads identically to a sighted user; the
+          // headline is for visual hierarchy, not document structure.
           <p className="text-lg font-semibold text-graphite-50">
             {HERO_HEADLINE}
           </p>
         ) : (
-          // Footer variant renders below the Features H3 cards, so an
-          // H3 here continues the existing same-level hierarchy.
-          <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-graphite-50">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-graphite-50">
             {FOOTER_HEADLINE}
-          </h3>
+          </p>
         )}
         <p className="mt-1 text-sm text-graphite-300">
           {variant === "hero" ? HERO_BLURB : FOOTER_BLURB}
