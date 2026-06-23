@@ -49,11 +49,8 @@ export const Footer = () => {
                 </a>
               </li>
               <li>
-                {/* Placeholder href until US-156 renders /privacy from the dev
-                    repo's Documentation/Policies/Privacy_Policy.md. The link
-                    intentionally 404s until that prompt closes. */}
                 <a
-                  href="/privacy"
+                  href="/privacy/"
                   className="text-graphite-300 transition-colors hover:text-ember-400 focus-visible:text-ember-400"
                 >
                   Privacy Policy

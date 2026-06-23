@@ -1,11 +1,14 @@
 import "../styles/globals.css";
 
+import { MDXProvider } from "@mdx-js/react";
 import type { AppProps } from "next/app";
 import Head from "next/head";
 
+import { mdxComponents } from "../src/components/mdx";
+
 const App = ({ Component, pageProps }: AppProps) => {
   return (
-    <>
+    <MDXProvider components={mdxComponents}>
       <Head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/icons/favicon.ico" />
@@ -16,7 +19,7 @@ const App = ({ Component, pageProps }: AppProps) => {
         />
       </Head>
       <Component {...pageProps} />
-    </>
+    </MDXProvider>
   );
 };
 

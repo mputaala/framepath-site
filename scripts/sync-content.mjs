@@ -134,6 +134,22 @@ export const stripDenyListedLinks = (markdown) => {
 };
 
 /**
+ * Convert CommonMark autolinks (`<https://example.com>`) to explicit
+ * markdown links (`[https://example.com](https://example.com)`). MDX
+ * interprets `<…>` as the start of a JSX tag and chokes on the `/` inside
+ * URLs, so any `<url>` autolink the dev-repo source uses must be expanded
+ * before MDX compiles. Also covers `<mailto:…>`. Other `<…>` constructs
+ * (HTML comments, `<Component>`, etc.) are left alone because they don't
+ * match the protocol prefix.
+ */
+export const normaliseAutolinks = (markdown) => {
+  return markdown.replace(
+    /<((?:https?:\/\/|mailto:)[^>\s]+)>/gi,
+    (_match, url) => `[${url}](${url})`,
+  );
+};
+
+/**
  * Remove every line starting with `<!-- internal:` (after optional leading
  * whitespace). Used to scrub maintainer-internal notes the dev repo might
  * carry inline in published policies.
@@ -250,7 +266,9 @@ const handleMarkdownDirectory = async ({
     }
     slugRegistry.set(slug, fileName);
 
-    const cleanedBody = stripDenyListedLinks(stripInternalComments(body));
+    const cleanedBody = normaliseAutolinks(
+      stripDenyListedLinks(stripInternalComments(body)),
+    );
 
     const meta = {
       title,

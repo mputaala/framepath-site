@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  normaliseAutolinks,
   resolveSourcePath,
   slugFromHeading,
   stripDenyListedLinks,
@@ -133,6 +134,46 @@ describe("stripInternalComments (US-156)", () => {
   it("does not strip lines where 'internal:' appears mid-line", () => {
     const md = "Refer to the internal: docs.";
     expect(stripInternalComments(md)).toBe(md);
+  });
+});
+
+describe("normaliseAutolinks (US-156 — MDX compatibility)", () => {
+  it("expands an https autolink to an explicit markdown link", () => {
+    expect(normaliseAutolinks("See <https://example.com/path>.")).toBe(
+      "See [https://example.com/path](https://example.com/path).",
+    );
+  });
+
+  it("expands an http autolink", () => {
+    expect(normaliseAutolinks("<http://example.com>")).toBe(
+      "[http://example.com](http://example.com)",
+    );
+  });
+
+  it("expands a mailto autolink", () => {
+    expect(normaliseAutolinks("Contact <mailto:foo@bar.com>.")).toBe(
+      "Contact [mailto:foo@bar.com](mailto:foo@bar.com).",
+    );
+  });
+
+  it("leaves HTML comments alone", () => {
+    expect(normaliseAutolinks("<!-- regular comment -->")).toBe(
+      "<!-- regular comment -->",
+    );
+  });
+
+  it("leaves component-like tags alone", () => {
+    expect(normaliseAutolinks("<Callout type=\"info\">hi</Callout>")).toBe(
+      "<Callout type=\"info\">hi</Callout>",
+    );
+  });
+
+  it("handles multiple autolinks on one line", () => {
+    expect(
+      normaliseAutolinks("Refs: <https://a.com>, <https://b.com>"),
+    ).toBe(
+      "Refs: [https://a.com](https://a.com), [https://b.com](https://b.com)",
+    );
   });
 });
 
