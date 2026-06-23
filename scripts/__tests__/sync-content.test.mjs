@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
+import sharp from "sharp";
 
 import {
+  buildImageVariants,
+  DEFAULT_AVIF_BUDGET_BYTES,
+  DEFAULT_THUMBNAIL_WIDTH,
+  encodeAvifWithinBudget,
   normaliseAutolinks,
   resolveSourcePath,
   slugFromHeading,
@@ -223,5 +228,132 @@ describe("stripDenyListedLinks (US-156)", () => {
     expect(out).toContain("[Apple](https://www.apple.com/)");
     expect(out).toContain("old debug page");
     expect(out).not.toContain("cloudfunctions.net");
+  });
+});
+
+/* ─── US-158 image pipeline ─────────────────────────────────────────────── */
+
+/**
+ * Synthesise a deterministic test PNG. Using Sharp's create-from-pixel
+ * factory so the test doesn't need a committed binary fixture. The default
+ * 200x100 solid background compresses to ~well under 1 KB AVIF; the
+ * noiseScale option produces an image that won't compress as aggressively
+ * so the budget-guard test has teeth.
+ */
+const makeFakePng = async ({ width = 200, height = 100, noise = false } = {}) => {
+  if (!noise) {
+    return sharp({
+      create: {
+        width,
+        height,
+        channels: 3,
+        background: { r: 100, g: 150, b: 200 },
+      },
+    })
+      .png()
+      .toBuffer();
+  }
+  // Pseudo-random pixel data; defeats compression so AVIF output gets large.
+  const pixels = Buffer.alloc(width * height * 3);
+  let seed = 1234567;
+  for (let i = 0; i < pixels.length; i++) {
+    seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+    pixels[i] = seed & 0xff;
+  }
+  return sharp(pixels, { raw: { width, height, channels: 3 } })
+    .png({ compressionLevel: 9 })
+    .toBuffer();
+};
+
+describe("DEFAULT_AVIF_BUDGET_BYTES (US-158)", () => {
+  it("is 80 KB per the Sprint 29 Prompt 1 AC", () => {
+    expect(DEFAULT_AVIF_BUDGET_BYTES).toBe(80 * 1024);
+  });
+});
+
+describe("DEFAULT_THUMBNAIL_WIDTH (US-158)", () => {
+  it("is 400px per the Sprint 29 Prompt 1 AC", () => {
+    expect(DEFAULT_THUMBNAIL_WIDTH).toBe(400);
+  });
+});
+
+describe("encodeAvifWithinBudget (US-158)", () => {
+  it("returns a buffer + quality when the source fits the budget", async () => {
+    const png = await makeFakePng({ width: 200, height: 100 });
+    const result = await encodeAvifWithinBudget(png, DEFAULT_AVIF_BUDGET_BYTES);
+    expect(result).not.toBeNull();
+    expect(result.buffer).toBeInstanceOf(Buffer);
+    expect(result.buffer.length).toBeLessThanOrEqual(DEFAULT_AVIF_BUDGET_BYTES);
+    expect(result.quality).toBeGreaterThanOrEqual(20);
+    expect(result.quality).toBeLessThanOrEqual(60);
+  });
+
+  it("prefers the highest quality that fits — solid-fill PNG returns the first ladder rung", async () => {
+    const png = await makeFakePng({ width: 200, height: 100 });
+    const result = await encodeAvifWithinBudget(png, DEFAULT_AVIF_BUDGET_BYTES);
+    expect(result.quality).toBe(60);
+  });
+
+  it("returns null when even the lowest-quality step exceeds an absurdly tight budget", async () => {
+    const png = await makeFakePng({ width: 200, height: 100 });
+    // 100-byte budget is below any AVIF header, so even quality=20 overshoots.
+    const result = await encodeAvifWithinBudget(png, 100);
+    expect(result).toBeNull();
+  });
+});
+
+describe("buildImageVariants (US-158)", () => {
+  it("produces avif/webp/png/thumb buffers + native dimensions", async () => {
+    const png = await makeFakePng({ width: 640, height: 320 });
+    const v = await buildImageVariants(png, {
+      budgetBytes: DEFAULT_AVIF_BUDGET_BYTES,
+      thumbnailWidth: DEFAULT_THUMBNAIL_WIDTH,
+      id: "test-asset",
+    });
+    expect(v.avif).toBeInstanceOf(Buffer);
+    expect(v.webp).toBeInstanceOf(Buffer);
+    expect(v.png).toBeInstanceOf(Buffer);
+    expect(v.thumb).toBeInstanceOf(Buffer);
+    expect(v.width).toBe(640);
+    expect(v.height).toBe(320);
+    expect(v.avif.length).toBeLessThanOrEqual(DEFAULT_AVIF_BUDGET_BYTES);
+    expect(v.avifQuality).toBeGreaterThanOrEqual(20);
+  });
+
+  it("throws a budget-regression error when the source can't fit the AVIF budget", async () => {
+    const png = await makeFakePng({ width: 256, height: 256 });
+    await expect(
+      buildImageVariants(png, {
+        budgetBytes: 100,
+        thumbnailWidth: DEFAULT_THUMBNAIL_WIDTH,
+        id: "too-dense",
+      }),
+    ).rejects.toThrow(/budget regression/i);
+  });
+
+  it("downsizes the thumbnail to at most `thumbnailWidth`", async () => {
+    const png = await makeFakePng({ width: 1200, height: 800 });
+    const v = await buildImageVariants(png, {
+      budgetBytes: DEFAULT_AVIF_BUDGET_BYTES,
+      thumbnailWidth: 400,
+      id: "thumb-test",
+    });
+    const meta = await sharp(v.thumb).metadata();
+    expect(meta.width).toBeLessThanOrEqual(400);
+  });
+
+  it("preserves the source PNG dimensions in the avif / webp / png outputs", async () => {
+    const png = await makeFakePng({ width: 800, height: 600 });
+    const v = await buildImageVariants(png, {
+      budgetBytes: DEFAULT_AVIF_BUDGET_BYTES,
+      thumbnailWidth: 400,
+      id: "dims-test",
+    });
+    const avifMeta = await sharp(v.avif).metadata();
+    const webpMeta = await sharp(v.webp).metadata();
+    const pngMeta = await sharp(v.png).metadata();
+    expect(avifMeta.width).toBe(800);
+    expect(webpMeta.width).toBe(800);
+    expect(pngMeta.width).toBe(800);
   });
 });

@@ -11,10 +11,10 @@
     },
     {
       "id": "screenshots-final",
-      "source": "Documentation/User Guide/Assets/Screenshots/Final",
-      "kind": "image-directory",
+      "source": "Documentation/User Guide/Assets/Screenshots",
+      "kind": "image-allowlist",
       "destination": "public/screenshots",
-      "notes": "Curated PNG screenshots. Sharp-driven AVIF/WebP/PNG triplet pipeline lands in US-158; per-screenshot allowlist file at config/screenshot-allowlist.json drives selection."
+      "notes": "Curated PNG screenshots. The 'source' here is a security boundary — every entry in config/screenshot-allowlist.json must resolve under this path. The dev repo's actual screenshots live under nested per-feature subdirectories (e.g. '01 — Welcome to FramePath/Final/', '10 — Storyboarding/Final/') rather than a single flat Final/ directory; the boundary therefore broadens to the parent. Sharp-driven AVIF/WebP/PNG triplet pipeline + 400w WebP thumbnail per entry lands in US-158; the per-screenshot allowlist drives selection."
     },
     {
       "id": "features",

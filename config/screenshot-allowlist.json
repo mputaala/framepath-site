@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "description": "Per-screenshot allowlist for the US-158 image pipeline. Each entry pairs a stable logical 'id' (used as the canonical reference from <Screenshot id=\"…\" /> in MDX and from src/sections/* in React) with an absolute-from-dev-repo-root 'source' path. The sync-content.mjs handleImageAllowlist transform reads this file, validates every source resolves under the sync-allowlist.json 'screenshots-final' boundary, runs Sharp to produce AVIF / WebP / PNG triplets plus a 400w WebP thumbnail per entry, and writes public/screenshots/manifest.json mapping id -> { avif, webp, png, thumb, width, height, alt, priority }. The per-asset 80 KB AVIF budget is enforced; a regression fails the build. Dev-repo filenames can rotate without breaking the site as long as this file updates alongside.",
+  "avifBudgetBytes": 81920,
+  "thumbnailWidth": 400,
+  "screenshots": [
+    {
+      "id": "hero-mac",
+      "source": "Documentation/User Guide/Assets/Screenshots/01 — Welcome to FramePath/Final/01.1_Hero_screenshot.png",
+      "alt": "FramePath's hero view on Mac — screenplay on the left, scene navigator in the middle, shot list on the right.",
+      "priority": true
+    },
+    {
+      "id": "write-mac",
+      "source": "Documentation/User Guide/Assets/Screenshots/04 — Writing Your Scenes/Final/04.1_Write_stage_with_one_scene_open.png",
+      "alt": "Scene Editor on Mac — a Fountain-formatted scene open for editing in the Write stage.",
+      "priority": false
+    },
+    {
+      "id": "plan-mac",
+      "source": "Documentation/User Guide/Assets/Screenshots/09 — Managing Shots/Final/09.3_Three_shot_cards_side_by_side.png",
+      "alt": "Plan stage on Mac — three annotated shot cards side by side showing size, angle, and storyboard frame.",
+      "priority": false
+    },
+    {
+      "id": "storyboard-mac",
+      "source": "Documentation/User Guide/Assets/Screenshots/10 — Storyboarding/Final/10.1_Board_view_on_Mac.png",
+      "alt": "Storyboard board view on Mac — hand-drawn frames arranged in shot order across the scene.",
+      "priority": false
+    },
+    {
+      "id": "shoot-ipad",
+      "source": "Documentation/User Guide/Assets/Screenshots/12 — Shoot Mode/Final/12.1_Shoot_mode_on_iPad.png",
+      "alt": "Shoot Mode on iPad — current shot, scene context, and clapperboard side by side, ready for set.",
+      "priority": false
+    }
+  ]
+}
