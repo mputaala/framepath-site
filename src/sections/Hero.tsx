@@ -41,14 +41,15 @@ export const Hero = () => {
         </div>
 
         {/* DELIBERATE FAILURE — US-157 gate verification PR.
-            Removed width / height attributes to provoke a CLS regression
-            that should fail the Lighthouse cumulative-layout-shift assertion
-            (maxNumericValue: 0.1) and the categories:performance >= 0.95
-            assertion. This PR is expected to NEVER merge. */}
+            Dropped alt text + width/height to provoke a Lighthouse
+            accessibility-score regression (image-alt audit). Substituted
+            for the original CLS regression because Lighthouse measures CLS
+            from real layout shift, and a fast-loading static-export asset
+            doesn't shift. The missing alt is a deterministic gate failure.
+            This PR is expected to NEVER merge. */}
         <div className="relative mx-auto mt-16 max-w-5xl sm:mt-20">
           <img
             src="/screenshots/hero-placeholder.png"
-            alt="A screenshot of the FramePath app showing a scene card grid alongside the script."
             decoding="async"
             className="w-full rounded-2xl border border-graphite-800 shadow-2xl shadow-black/50"
           />
