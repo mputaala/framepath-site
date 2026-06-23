@@ -40,12 +40,15 @@ export const Hero = () => {
           </div>
         </div>
 
-        {/* Hero screenshot. Explicit width / height attrs prevent CLS (US-154
-            edge case). Replaced by the US-158 image pipeline. */}
+        {/* DELIBERATE FAILURE -- US-157 gate verification PR. Removed `alt`
+            from the hero img to provoke a Lighthouse image-alt audit
+            failure, which trips the per-audit assertion + cascades into
+            categories:accessibility minScore: 1.0. Substituted from the
+            original CLS regression because static-export fast-load assets
+            don't actually shift layout. NEVER MERGE. */}
         <div className="relative mx-auto mt-16 max-w-5xl sm:mt-20">
           <img
             src="/screenshots/hero-placeholder.png"
-            alt="A screenshot of the FramePath app showing a scene card grid alongside the script."
             width={1600}
             height={900}
             decoding="async"
