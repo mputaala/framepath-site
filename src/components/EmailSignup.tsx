@@ -29,6 +29,14 @@
 // Buttondown access to first-party cookies. The Cross-cutting "no cookies"
 // AC holds.
 //
+// Spam handling: Buttondown's own filtering + double-opt-in flow are the
+// primary defence. The Sprint 29 Prompt 6 first-draft also embedded a
+// classic honey-pot input, but it dropped Lighthouse Accessibility from
+// 1.0 → 0.98 (the hidden input had no associated label even with
+// aria-hidden + tabIndex=-1 + off-screen positioning). Removed; if a real
+// abuse rate appears, revisit with a labelled honey-pot or a tighter
+// per-IP rate-limit at Buttondown's side.
+//
 // prefers-reduced-motion: success / error state transitions only animate
 // inside `motion-safe:` Tailwind variants.
 
@@ -218,19 +226,6 @@ export const EmailSignup = ({ variant = "hero" }: EmailSignupProps) => {
       {/* Buttondown source-tag — sent on no-JS submit too so dual-path
           subscribers are equally identifiable in the Buttondown UI. */}
       <input type="hidden" name="tag" value={BUTTONDOWN_SOURCE_TAG} />
-      {/* Honey-pot field for the no-JS submit path. Buttondown ignores
-          unknown fields; a bot that fills every visible field would also
-          fill this one, which we'd then surface in the Buttondown UI for
-          manual review. Not load-bearing — Buttondown's own spam filtering
-          is the first line of defence. */}
-      <input
-        type="text"
-        name="hp_url"
-        autoComplete="off"
-        tabIndex={-1}
-        aria-hidden="true"
-        className="absolute left-[-9999px] top-auto h-px w-px overflow-hidden"
-      />
 
       {status === "error" ? (
         <p
