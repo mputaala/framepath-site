@@ -21,6 +21,7 @@ type FeatureSummary = {
   slug: string;
   title: string;
   summary: string;
+  order: number;
 };
 
 type FeaturesIndexProps = {
@@ -111,10 +112,16 @@ export const getStaticProps: GetStaticProps<FeaturesIndexProps> = async () => {
         ? fm.title
         : slug;
     const summary = typeof fm.summary === "string" ? fm.summary : "";
-    features.push({ slug, title, summary });
+    // `order` lets the marketing-side editorial sequence (Write → Plan →
+    // Shoot) survive the otherwise-alphabetical sort. Frontmatter
+    // without an `order` falls to the end and tie-breaks on title.
+    const order =
+      typeof fm.order === "number" && Number.isFinite(fm.order)
+        ? fm.order
+        : 999;
+    features.push({ slug, title, summary, order });
   }
-  // Alphabetical by title — stable, predictable for crawl + screenshot.
-  features.sort((a, b) => a.title.localeCompare(b.title));
+  features.sort((a, b) => a.order - b.order || a.title.localeCompare(b.title));
   return { props: { features } };
 };
 
