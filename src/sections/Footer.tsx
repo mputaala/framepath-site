@@ -1,4 +1,5 @@
 import { Container } from "../components/Container";
+import { EmailSignup } from "../components/EmailSignup";
 import { APP_STORE_URL, TESTFLIGHT_URL } from "../config/links";
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -8,7 +9,7 @@ export const Footer = () => {
     <footer className="py-16">
       <Container>
         <div className="flex flex-col items-start justify-between gap-12 md:flex-row md:items-end">
-          {/* Wordmark + tagline */}
+          {/* Wordmark + tagline + footer-variant newsletter signup. */}
           <div>
             <a
               href="/"
@@ -23,6 +24,7 @@ export const Footer = () => {
             <p className="mt-3 max-w-xs text-sm text-graphite-300">
               A planning app for filmmakers.
             </p>
+            <EmailSignup variant="footer" />
           </div>
 
           {/* Nav links */}

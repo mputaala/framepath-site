@@ -1,5 +1,6 @@
 import { AppStoreBadge } from "../components/AppStoreBadge";
 import { Container } from "../components/Container";
+import { EmailSignup } from "../components/EmailSignup";
 import { TestFlightLink } from "../components/TestFlightLink";
 import { Screenshot } from "../components/mdx/Screenshot";
 import { APP_STORE_URL, TESTFLIGHT_URL } from "../config/links";
@@ -39,6 +40,12 @@ export const Hero = () => {
             <AppStoreBadge href={APP_STORE_URL} />
             <TestFlightLink href={TESTFLIGHT_URL} />
           </div>
+
+          {/* US-161 newsletter signup — embedded in the hero so the
+              waitlist-conversion surface is one viewport away from the
+              tagline. Footer carries a smaller variant for visitors who
+              scroll past without converting. */}
+          <EmailSignup variant="hero" />
         </div>
 
         {/* Hero screenshot. <Screenshot> bakes width / height from the
