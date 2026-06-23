@@ -20,6 +20,13 @@ describe("resolveSourcePath (US-155 path-traversal guards)", () => {
     );
   });
 
+  // THROWAWAY: Sprint 28 carry-forward mputaala/Frame#279 verification —
+  // deliberately failing assertion to confirm the new tests.yml workflow
+  // blocks merge. Reverted before close.
+  it("THROWAWAY: deliberately fails to verify the tests.yml gate", () => {
+    expect(1 + 1).toBe(3);
+  });
+
   it("rejects a deeper-nested '..' segment that still escapes the root", () => {
     expect(() =>
       resolveSourcePath(FAKE_DEV_ROOT, "Documentation/Policies/../../escape"),
