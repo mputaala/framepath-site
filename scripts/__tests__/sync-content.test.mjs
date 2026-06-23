@@ -438,6 +438,22 @@ describe("slugFromFilename (US-159)", () => {
   it("rejects a filename that produces an empty slug", () => {
     expect(() => slugFromFilename("---.md")).toThrow(/empty slug/);
   });
+
+  it("strips a leading two-digit + whitespace order prefix", () => {
+    expect(slugFromFilename("01 Write.md")).toBe("write");
+    expect(slugFromFilename("02 Plan.md")).toBe("plan");
+    expect(slugFromFilename("03 Shoot.md")).toBe("shoot");
+  });
+
+  it("strips the prefix before kebab-casing the rest", () => {
+    expect(slugFromFilename("10 Two Word Section.md")).toBe(
+      "two-word-section",
+    );
+  });
+
+  it("leaves a non-prefixed numeric filename alone", () => {
+    expect(slugFromFilename("404 Not Found.md")).toBe("404-not-found");
+  });
 });
 
 describe("escapeMdxUnsafeAngles (US-159 MDX compatibility)", () => {

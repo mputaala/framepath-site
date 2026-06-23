@@ -467,16 +467,21 @@ export const stripMarketingSkipSections = (markdown) => {
 };
 
 /**
- * Convert a feature filename (e.g., `Story_Editor.md`) into a kebab-case
- * slug (`story-editor`). Used by the published-gate handler. Strips the
- * `.md` / `.mdx` extension, lowercases, and collapses runs of non-
- * alphanumeric characters to single dashes.
+ * Convert a feature filename (e.g., `Story_Editor.md`, `01 Write.md`)
+ * into a kebab-case slug (`story-editor`, `write`). Used by the
+ * published-gate handler. A leading two-digit prefix followed by
+ * whitespace (the editorial-order pattern the Documentation/Marketing
+ * docs use — `01 Write.md`, `02 Plan.md`, `03 Shoot.md`) is stripped
+ * BEFORE kebab-casing so the resulting slug doesn't carry the
+ * authoring sequence into the URL.
  */
 export const slugFromFilename = (filename) => {
   if (typeof filename !== "string" || filename.trim().length === 0) {
     throw new Error("slugFromFilename: filename must be a non-empty string");
   }
-  const base = filename.replace(/\.(mdx?|MDX?)$/, "");
+  const base = filename
+    .replace(/\.(mdx?|MDX?)$/, "")
+    .replace(/^\d{2}\s+/, "");
   const slug = base
     .toLowerCase()
     .normalize("NFKD")
