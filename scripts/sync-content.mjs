@@ -605,6 +605,14 @@ const handleMarkdownDirectoryWithFrontmatterGate = async ({
       sourceFile: fileName,
       published: true,
     };
+    // Pass through the `order` frontmatter field if present so the
+    // /features index page can sort by editorial order rather than
+    // alphabetical. Detected as a hardening probe in Prompt 11 when
+    // the live index rendered Plan → Shoot → Write instead of
+    // Write → Plan → Shoot.
+    if (typeof fm.order === "number" && Number.isFinite(fm.order)) {
+      meta.order = fm.order;
+    }
     const out = renderFrontmatter(meta) + cleanedBody.replace(/^\s+/, "");
     const destPath = join(destinationRoot, `${slug}.mdx`);
     await writeFile(destPath, out, "utf8");
