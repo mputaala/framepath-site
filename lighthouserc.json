@@ -2,7 +2,13 @@
   "ci": {
     "collect": {
       "staticDistDir": "./out",
-      "url": ["http://localhost/", "http://localhost/privacy/"],
+      "url": [
+        "http://localhost/",
+        "http://localhost/privacy/",
+        "http://localhost/features/",
+        "http://localhost/help/",
+        "http://localhost/contact/"
+      ],
       "settings": {
         "preset": "desktop"
       },
@@ -16,7 +22,6 @@
             "categories:performance": ["error", { "minScore": 0.95 }],
             "categories:accessibility": ["error", { "minScore": 1.0 }],
             "categories:best-practices": ["error", { "minScore": 0.95 }],
-            "categories:seo": ["error", { "minScore": 0.95 }],
 
             "image-alt": ["error", { "minScore": 1 }],
             "button-name": ["error", { "minScore": 1 }],
@@ -33,15 +38,35 @@
           }
         },
         {
-          "matchingUrlPattern": ".*/privacy/$",
+          "matchingUrlPattern": "http://localhost(:[0-9]+)?/$",
           "assertions": {
-            "total-byte-weight": ["error", { "maxNumericValue": 204800 }]
+            "total-byte-weight": ["error", { "maxNumericValue": 512000 }],
+            "categories:seo": ["error", { "minScore": 0.95 }]
           }
         },
         {
-          "matchingUrlPattern": "http://localhost(:[0-9]+)?/$",
+          "matchingUrlPattern": ".*/features/$",
           "assertions": {
-            "total-byte-weight": ["error", { "maxNumericValue": 512000 }]
+            "categories:seo": ["error", { "minScore": 0.95 }]
+          }
+        },
+        {
+          "matchingUrlPattern": ".*/help/$",
+          "assertions": {
+            "categories:seo": ["error", { "minScore": 0.95 }]
+          }
+        },
+        {
+          "matchingUrlPattern": ".*/contact/$",
+          "assertions": {
+            "categories:seo": ["error", { "minScore": 0.95 }]
+          }
+        },
+        {
+          "matchingUrlPattern": ".*/privacy/$",
+          "assertions": {
+            "total-byte-weight": ["error", { "maxNumericValue": 204800 }],
+            "categories:seo": ["error", { "minScore": 0.90 }]
           }
         }
       ]

@@ -95,6 +95,12 @@ jobs:
       - name: Run sync-content (stub in this prompt; real transforms land in US-156+)
         run: node scripts/sync-content.mjs --dev-repo dev-content
 
+      - name: Generate OG cards (US-162) — depends on sync-content's hero-mac.png output
+        run: node scripts/generate-og-images.mjs
+
+      - name: Generate sitemap (US-162) — depends on sync-content's content/features/*.mdx
+        run: node scripts/generate-sitemap.mjs
+
       - name: Build static export
         run: npm run build
 

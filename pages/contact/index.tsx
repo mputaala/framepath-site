@@ -9,10 +9,9 @@
 // with JavaScript enabled or disabled, satisfying the prompt's no-JS
 // fallback AC.
 
-import Head from "next/head";
-
 import { Container } from "../../src/components/Container";
 import { ContactForm } from "../../src/components/ContactForm";
+import { SEO } from "../../src/components/SEO";
 import { Footer } from "../../src/sections/Footer";
 
 const PAGE_TITLE = "Contact · FramePath";
@@ -23,16 +22,11 @@ const CANONICAL_URL = "https://framepath.fi/contact/";
 const ContactPage = () => {
   return (
     <>
-      <Head>
-        <title>{PAGE_TITLE}</title>
-        <meta name="description" content={PAGE_DESCRIPTION} />
-        <link rel="canonical" href={CANONICAL_URL} />
-        <meta property="og:title" content={PAGE_TITLE} />
-        <meta property="og:description" content={PAGE_DESCRIPTION} />
-        <meta property="og:url" content={CANONICAL_URL} />
-        <meta property="og:type" content="website" />
-        <meta name="twitter:card" content="summary" />
-      </Head>
+      <SEO
+        title={PAGE_TITLE}
+        description={PAGE_DESCRIPTION}
+        canonicalUrl={CANONICAL_URL}
+      />
       <main className="py-16 sm:py-20">
         <Container className="max-w-2xl">
           <header className="mx-auto max-w-xl text-center">

@@ -67,6 +67,12 @@ jobs:
       - name: Run sync-content
         run: node scripts/sync-content.mjs --dev-repo dev-content
 
+      - name: Generate OG cards (US-162)
+        run: node scripts/generate-og-images.mjs
+
+      - name: Generate sitemap (US-162)
+        run: node scripts/generate-sitemap.mjs
+
       - name: Build static export
         run: npm run build
 

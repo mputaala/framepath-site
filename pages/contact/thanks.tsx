@@ -12,9 +12,8 @@
 // `noindex` meta tag keeps search engines from surfacing it as a
 // stand-alone destination.
 
-import Head from "next/head";
-
 import { Container } from "../../src/components/Container";
+import { SEO } from "../../src/components/SEO";
 import { Footer } from "../../src/sections/Footer";
 
 const PAGE_TITLE = "Message sent · FramePath";
@@ -25,17 +24,12 @@ const CANONICAL_URL = "https://framepath.fi/contact/thanks/";
 const ContactThanksPage = () => {
   return (
     <>
-      <Head>
-        <title>{PAGE_TITLE}</title>
-        <meta name="description" content={PAGE_DESCRIPTION} />
-        <meta name="robots" content="noindex,follow" />
-        <link rel="canonical" href={CANONICAL_URL} />
-        <meta property="og:title" content={PAGE_TITLE} />
-        <meta property="og:description" content={PAGE_DESCRIPTION} />
-        <meta property="og:url" content={CANONICAL_URL} />
-        <meta property="og:type" content="website" />
-        <meta name="twitter:card" content="summary" />
-      </Head>
+      <SEO
+        title={PAGE_TITLE}
+        description={PAGE_DESCRIPTION}
+        canonicalUrl={CANONICAL_URL}
+        noindex
+      />
       <main className="py-16 sm:py-20">
         <Container className="max-w-2xl">
           <div className="mx-auto max-w-xl rounded-2xl border border-ember-500/40 bg-graphite-900/40 p-8 text-center">

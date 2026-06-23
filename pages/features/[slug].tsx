@@ -14,12 +14,12 @@ import path from "node:path";
 
 import matter from "gray-matter";
 import type { GetStaticPaths, GetStaticProps } from "next";
-import Head from "next/head";
 import { MDXRemote, type MDXRemoteSerializeResult } from "next-mdx-remote";
 import { serialize } from "next-mdx-remote/serialize";
 
 import { Container } from "../../src/components/Container";
 import { Prose } from "../../src/components/Prose";
+import { SEO } from "../../src/components/SEO";
 import { mdxComponents } from "../../src/components/mdx";
 import { Footer } from "../../src/sections/Footer";
 
@@ -38,16 +38,12 @@ const FeaturePage = ({ title, summary, slug, source }: FeaturePageProps) => {
   const description = summary || `${title} on FramePath.`;
   return (
     <>
-      <Head>
-        <title>{pageTitle}</title>
-        <meta name="description" content={description} />
-        <link rel="canonical" href={canonicalUrl} />
-        <meta property="og:title" content={pageTitle} />
-        <meta property="og:description" content={description} />
-        <meta property="og:url" content={canonicalUrl} />
-        <meta property="og:type" content="article" />
-        <meta name="twitter:card" content="summary" />
-      </Head>
+      <SEO
+        title={pageTitle}
+        description={description}
+        canonicalUrl={canonicalUrl}
+        ogType="article"
+      />
       <main className="py-16 sm:py-20">
         <Container className="max-w-3xl">
           <Prose>
