@@ -1,6 +1,7 @@
 import { AppStoreBadge } from "../components/AppStoreBadge";
 import { Container } from "../components/Container";
 import { TestFlightLink } from "../components/TestFlightLink";
+import { Screenshot } from "../components/mdx/Screenshot";
 import { APP_STORE_URL, TESTFLIGHT_URL } from "../config/links";
 
 // Tagline (US-154 AC: <= 60 chars). Current: 35 chars.
@@ -40,15 +41,16 @@ export const Hero = () => {
           </div>
         </div>
 
-        {/* Hero screenshot. Explicit width / height attrs prevent CLS (US-154
-            edge case). Replaced by the US-158 image pipeline. */}
+        {/* Hero screenshot. <Screenshot> bakes width / height from the
+            manifest so the reserved layout box matches the source PNG's
+            aspect ratio (CLS = 0 by construction). priority drives eager
+            loading + fetchPriority="high" since this is the LCP candidate
+            on the landing page. US-158 image pipeline serves the AVIF
+            variant first, WebP second, PNG fallback last. */}
         <div className="relative mx-auto mt-16 max-w-5xl sm:mt-20">
-          <img
-            src="/screenshots/hero-placeholder.png"
-            alt="A screenshot of the FramePath app showing a scene card grid alongside the script."
-            width={1600}
-            height={900}
-            decoding="async"
+          <Screenshot
+            id="hero-mac"
+            priority
             className="w-full rounded-2xl border border-graphite-800 shadow-2xl shadow-black/50"
           />
         </div>
