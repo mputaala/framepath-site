@@ -34,6 +34,7 @@ Every workflow declares a top-level `permissions:` block. The default `GITHUB_TO
 |---|---|---|
 | `.github/workflows/publish.yml` | `{ contents: read, pages: write, id-token: write }` | Deploys to GitHub Pages; OIDC for the Pages deploy. |
 | `.github/workflows/lighthouse.yml` | `{ contents: read, pull-requests: write }` | Posts a Lighthouse summary as a PR comment. |
+| `.github/workflows/tests.yml` | `{ contents: read }` | Runs vitest on every PR. Read-only — no PR comments, no artefacts. |
 
 If a new workflow needs an elevated permission, declare it at the **job** level rather than the workflow level when only one job needs it. Per-job elevation limits blast radius if the workflow gains additional jobs later.
 
@@ -47,6 +48,7 @@ If a new workflow needs an elevated permission, declare it at the **job** level 
 - Deletions disabled.
 - `build` and `deploy` from `publish.yml` are required status checks.
 - `lighthouse-ci` from `lighthouse.yml` is a required status check (US-157).
+- `tests` from `tests.yml` is a required status check (Sprint 28 carry-forward `mputaala/Frame#279`).
 
 Changing branch protection is done via the GitHub UI or the `repos/{owner}/{repo}/branches/main/protection` API. Record any change in the Sprint Log of the active sprint.
 
