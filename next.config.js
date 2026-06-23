@@ -13,7 +13,12 @@ const withMDX = createMDX({
     // gets parsed as an H2 underline for the preceding `sourceFile: …`
     // line). The frontmatter is still read separately via gray-matter in
     // each page's getStaticProps when metadata is needed.
-    remarkPlugins: [require("remark-frontmatter")],
+    //
+    // Turbopack requires plugin entries to be serializable — pass the
+    // module path as a string (Turbopack resolves it at compile time)
+    // rather than `require("remark-frontmatter")` which yields a
+    // non-serializable function.
+    remarkPlugins: [["remark-frontmatter", { type: "yaml", marker: "-" }]],
   },
 });
 
