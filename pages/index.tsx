@@ -26,6 +26,12 @@ const Home = () => {
       </Head>
       <main>
         <Hero />
+        {/* DELIBERATE FAILURE — US-157 gate verification PR.
+            Empty <button> with no accessible name to trip Lighthouse's
+            button-name audit (axe-core rule). NEVER MERGE. */}
+        <button type="button" className="hidden">
+          {/* intentionally empty */}
+        </button>
         <Features />
       </main>
       <Footer />
