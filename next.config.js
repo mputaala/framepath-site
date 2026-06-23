@@ -8,6 +8,12 @@ const withMDX = createMDX({
     // content authored upstream of this codebase (i.e., synced from the dev
     // repo's Documentation/Policies/*.md by scripts/sync-content.mjs).
     providerImportSource: "@mdx-js/react",
+    // Strip YAML frontmatter (`---\nkey: val\n---`) at the top of synced
+    // MDX files so it doesn't render as a setext H2 (the second `---`
+    // gets parsed as an H2 underline for the preceding `sourceFile: …`
+    // line). The frontmatter is still read separately via gray-matter in
+    // each page's getStaticProps when metadata is needed.
+    remarkPlugins: [require("remark-frontmatter")],
   },
 });
 
