@@ -17,7 +17,7 @@
 // rejects with a 4xx anyway, but at least no broken request shows up in
 // the Network tab during dev).
 
-export const CLOUDFLARE_ANALYTICS_TOKEN = "PLACEHOLDER_ANALYTICS_TOKEN";
+export const CLOUDFLARE_ANALYTICS_TOKEN = "9961b3a65b734525b0becb0c8234669b";
 
 export const CLOUDFLARE_BEACON_URL =
   "https://static.cloudflareinsights.com/beacon.min.js";
