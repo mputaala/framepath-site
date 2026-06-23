@@ -65,15 +65,20 @@ const H2WithAnchor = ({
   const id = slugifyHeading(text);
   // scroll-margin-top reserves vertical breathing room when the browser
   // scrolls a freshly-clicked anchor into view (matches the sticky TOC's
-  // approximate top offset). The `#` link is always visible at low opacity
-  // — covers touch devices that have no hover state.
+  // approximate top offset). The `#` link is INVISIBLE by default and
+  // appears only on hover / keyboard focus — GitHub's permalink
+  // pattern. Originally always-visible (US-160), changed after issues
+  // mputaala/Frame#282 + #283 surfaced that visitors read the leading
+  // `#` as leftover Markdown syntax. Hover-reveal preserves the
+  // permalink affordance for power users without polluting the
+  // visitor-facing rendering.
   return (
-    <h2 id={id || undefined} {...rest} className="scroll-mt-24">
+    <h2 id={id || undefined} {...rest} className="group scroll-mt-24">
       {id ? (
         <a
           href={`#${id}`}
           aria-label={`Permalink to "${text}"`}
-          className="mr-2 text-graphite-500 no-underline opacity-70 transition-opacity hover:text-ember-400 hover:opacity-100 focus-visible:text-ember-400 focus-visible:opacity-100"
+          className="mr-2 text-graphite-500 no-underline opacity-0 transition-opacity group-hover:opacity-70 group-focus-within:opacity-70 hover:!text-ember-400 hover:!opacity-100 focus-visible:!text-ember-400 focus-visible:!opacity-100"
         >
           #
         </a>

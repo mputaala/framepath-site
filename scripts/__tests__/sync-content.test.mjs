@@ -14,12 +14,14 @@ import {
   normaliseAutolinks,
   renderFrontmatter,
   resolveSourcePath,
+  shiftHeadingsByOne,
   slugFromFilename,
   slugFromHeading,
   slugifyHeadingText,
   stripDenyListedLinks,
   stripInternalComments,
   stripMarketingSkipSections,
+  stripScreenshotPlaceholders,
 } from "../sync-content.mjs";
 
 // Use a Posix-style absolute path so the test is platform-deterministic on the
@@ -667,5 +669,77 @@ describe("extractH2Toc (US-160)", () => {
     expect(extractH2Toc(md)).toEqual([
       { title: "Real Heading", slug: "real-heading" },
     ]);
+  });
+});
+
+/* ─── mputaala/Frame#282 + #283 chapter-collation helpers ───────────────── */
+
+describe("stripScreenshotPlaceholders (mputaala/Frame#282)", () => {
+  it("removes lines starting with `<!-- Screenshot:`", () => {
+    const md = [
+      "# Welcome",
+      "",
+      "<!-- Screenshot: hero workspace -->",
+      "Body line.",
+    ].join("\n");
+    expect(stripScreenshotPlaceholders(md)).not.toContain("Screenshot:");
+    expect(stripScreenshotPlaceholders(md)).toContain("Body line.");
+  });
+
+  it("tolerates leading whitespace before the marker", () => {
+    const md = "   <!-- Screenshot: indented -->\nBody";
+    expect(stripScreenshotPlaceholders(md)).toBe("Body");
+  });
+
+  it("is case-insensitive on the `Screenshot:` token", () => {
+    const md = "<!-- screenshot: lowercase -->\nBody";
+    expect(stripScreenshotPlaceholders(md)).toBe("Body");
+  });
+
+  it("leaves regular HTML comments alone", () => {
+    const md = "# Title\n<!-- regular comment -->\nBody";
+    expect(stripScreenshotPlaceholders(md)).toContain("<!-- regular comment -->");
+  });
+
+  it("does not strip lines where 'Screenshot:' appears mid-line", () => {
+    const md = "Refer to the Screenshot: section above.";
+    expect(stripScreenshotPlaceholders(md)).toBe(md);
+  });
+});
+
+describe("shiftHeadingsByOne (mputaala/Frame#282)", () => {
+  it("shifts H1 to H2", () => {
+    expect(shiftHeadingsByOne("# Title")).toBe("## Title");
+  });
+
+  it("shifts H2 to H3", () => {
+    expect(shiftHeadingsByOne("## Sub")).toBe("### Sub");
+  });
+
+  it("shifts H5 to H6", () => {
+    expect(shiftHeadingsByOne("##### deep")).toBe("###### deep");
+  });
+
+  it("leaves H6 at H6 (no H7 in HTML)", () => {
+    expect(shiftHeadingsByOne("###### already deep")).toBe(
+      "###### already deep",
+    );
+  });
+
+  it("shifts every heading in a multi-heading document", () => {
+    const md = ["# A", "## B", "### C", "Body."].join("\n");
+    expect(shiftHeadingsByOne(md)).toBe(
+      ["## A", "### B", "#### C", "Body."].join("\n"),
+    );
+  });
+
+  it("does not touch lines that start with `#` without a following space", () => {
+    expect(shiftHeadingsByOne("#noheader")).toBe("#noheader");
+  });
+
+  it("does not touch lines where `#` appears mid-line", () => {
+    expect(shiftHeadingsByOne("Look at #issue-282.")).toBe(
+      "Look at #issue-282.",
+    );
   });
 });

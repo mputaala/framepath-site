@@ -210,6 +210,35 @@ export const normaliseAutolinks = (markdown) => {
 };
 
 /**
+ * Strip `<!-- Screenshot: ... -->` HTML-comment placeholders. The
+ * dev-repo User Guide chapter docs use this pattern to mark a spot
+ * where a real screenshot belongs ("<!-- Screenshot: Three-stage
+ * workspace -->"); rendering them as visible HTML comments on the
+ * marketing site would leak authoring notes. A future PR adds per-
+ * chapter `<Screenshot id="…">` substitution; for now the placeholder
+ * is removed and the surrounding italic caption is left to stand
+ * alone.
+ */
+export const stripScreenshotPlaceholders = (markdown) => {
+  return markdown
+    .split(/\r?\n/)
+    .filter((line) => !/^\s*<!--\s*Screenshot:/i.test(line))
+    .join("\n");
+};
+
+/**
+ * Increase every heading level by one — `# X` → `## X`, `## X` →
+ * `### X`, etc. Used by handleMarkdownDirectoryCollated so each
+ * chapter file's H1 becomes a chapter-H2 in the collated output,
+ * preserving a single top-level document hierarchy.
+ *
+ * H6 stays H6 (no H7 in HTML). H7+ shouldn't appear in the source.
+ */
+export const shiftHeadingsByOne = (markdown) => {
+  return markdown.replace(/^(#{1,5})(\s+)/gm, "$1#$2");
+};
+
+/**
  * Escape `<` characters that MDX would otherwise try to parse as the start
  * of a JSX tag but cannot — e.g. `<1 s` (a number after `<`), `<24h` etc.
  * A valid JSX tag name starts with a letter, `$`, or `_`; HTML comments
@@ -635,6 +664,123 @@ const handleMarkdownFile = async ({
   ];
 };
 
+/* ─── markdown-directory-collated transform (US-160 fix mputaala/Frame#282) */
+
+/**
+ * Collate every chapter file in a directory (filename matches
+ * `^\d{2}\s+.+\.md$`, e.g. `01 Welcome to FramePath.md`) into a single
+ * MDX page, sorted by the leading two-digit prefix. Each chapter's H1
+ * is demoted to H2 so the resulting page has one document-level
+ * hierarchy (the page itself supplies the visual H1; the chapter
+ * titles become anchored H2s the HelpTOC sidebar picks up).
+ *
+ * This is the production target for the /help route after issue
+ * mputaala/Frame#282 surfaced that the previous `markdown-file` source
+ * (`Documentation/Guides/Apple Help Book.md`) was an internal authoring
+ * guide, not user-facing content.
+ *
+ * Transforms applied per chapter (in order):
+ *   1. stripMarketingSkipSections
+ *   2. stripInternalComments
+ *   3. stripScreenshotPlaceholders  (drops `<!-- Screenshot: … -->`)
+ *   4. stripDenyListedLinks
+ *   5. normaliseAutolinks
+ *   6. escapeMdxUnsafeAngles
+ *   7. shiftHeadingsByOne          (H1 → H2 etc.)
+ *
+ * Output frontmatter: `{ title: "User Guide", sourceFiles: [...] }`.
+ * toc.json is generated from the resulting H2 list — i.e. the chapter
+ * titles.
+ */
+const handleMarkdownDirectoryCollated = async ({
+  entry,
+  resolvedSource,
+  siteRoot,
+}) => {
+  let entries;
+  try {
+    entries = await readdir(resolvedSource, { withFileTypes: true });
+  } catch (err) {
+    throw new Error(
+      `${entry.id ?? entry.source}: source directory unreadable: ${err.message}`,
+    );
+  }
+
+  const chapterFileRe = /^(\d{2})\s+(.+)\.md$/i;
+  const chapters = entries
+    .filter((d) => d.isFile() && chapterFileRe.test(d.name))
+    .map((d) => {
+      const match = d.name.match(chapterFileRe);
+      return { fileName: d.name, order: parseInt(match[1], 10) };
+    })
+    .sort((a, b) => a.order - b.order);
+
+  if (chapters.length === 0) {
+    throw new Error(
+      `${entry.id ?? entry.source}: no chapter-shaped *.md files in ${resolvedSource} (expected filenames like "01 Welcome.md")`,
+    );
+  }
+
+  const destPath = resolve(siteRoot, entry.destination);
+  const destDir = dirname(destPath);
+  await rm(destDir, { recursive: true, force: true });
+  await mkdir(destDir, { recursive: true });
+
+  const collatedSections = [];
+  const sourceFiles = [];
+  for (const { fileName } of chapters) {
+    const sourcePath = join(resolvedSource, fileName);
+    let raw;
+    try {
+      raw = await readFile(sourcePath, "utf8");
+    } catch (err) {
+      throw new Error(`${fileName}: read failed: ${err.message}`);
+    }
+    if (raw.trim().length === 0) continue;
+
+    const parsed = matter(raw);
+    const cleaned = shiftHeadingsByOne(
+      escapeMdxUnsafeAngles(
+        normaliseAutolinks(
+          stripDenyListedLinks(
+            stripScreenshotPlaceholders(
+              stripInternalComments(
+                stripMarketingSkipSections(parsed.content),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    collatedSections.push(cleaned.trim());
+    sourceFiles.push(fileName);
+  }
+
+  const meta = {
+    title: "User Guide",
+    sourceFiles: sourceFiles.join(", "),
+  };
+  const body = collatedSections.join("\n\n");
+  const out = renderFrontmatter(meta) + body + "\n";
+  await writeFile(destPath, out, "utf8");
+
+  const tocItems = extractH2Toc(body);
+  const tocPath = join(destDir, "toc.json");
+  await writeFile(
+    tocPath,
+    JSON.stringify({ items: tocItems }, null, 2) + "\n",
+    "utf8",
+  );
+
+  return [
+    {
+      slug: basename(destPath, ".mdx"),
+      sourceFile: `${chapters.length} chapter files`,
+      destination: `${destPath} (+ ${tocItems.length}-entry toc.json)`,
+    },
+  ];
+};
+
 /* ─── image-allowlist transform (US-158, Screenshots) ───────────────────── */
 
 /**
@@ -841,6 +987,7 @@ const KIND_HANDLERS = {
   "markdown-directory-with-frontmatter-gate":
     handleMarkdownDirectoryWithFrontmatterGate,
   "markdown-file": handleMarkdownFile,
+  "markdown-directory-collated": handleMarkdownDirectoryCollated,
 };
 
 const PENDING_KINDS = new Set([
