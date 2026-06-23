@@ -6,11 +6,14 @@ import {
   DEFAULT_AVIF_BUDGET_BYTES,
   DEFAULT_THUMBNAIL_WIDTH,
   encodeAvifWithinBudget,
+  isPublishedTrue,
   normaliseAutolinks,
   resolveSourcePath,
+  slugFromFilename,
   slugFromHeading,
   stripDenyListedLinks,
   stripInternalComments,
+  stripMarketingSkipSections,
 } from "../sync-content.mjs";
 
 // Use a Posix-style absolute path so the test is platform-deterministic on the
@@ -355,5 +358,140 @@ describe("buildImageVariants (US-158)", () => {
     expect(avifMeta.width).toBe(800);
     expect(webpMeta.width).toBe(800);
     expect(pngMeta.width).toBe(800);
+  });
+});
+
+/* ─── US-159 features pipeline ──────────────────────────────────────────── */
+
+describe("isPublishedTrue (US-159 strict frontmatter gate)", () => {
+  it("returns true only for the literal Boolean true", () => {
+    expect(isPublishedTrue(true)).toBe(true);
+  });
+
+  it("rejects the string 'true' (marketing-review bypass guard)", () => {
+    expect(isPublishedTrue("true")).toBe(false);
+  });
+
+  it("rejects the string 'True' / 'TRUE'", () => {
+    expect(isPublishedTrue("True")).toBe(false);
+    expect(isPublishedTrue("TRUE")).toBe(false);
+  });
+
+  it("rejects the number 1", () => {
+    expect(isPublishedTrue(1)).toBe(false);
+  });
+
+  it("rejects null, undefined, and false", () => {
+    expect(isPublishedTrue(null)).toBe(false);
+    expect(isPublishedTrue(undefined)).toBe(false);
+    expect(isPublishedTrue(false)).toBe(false);
+  });
+
+  it("rejects truthy strings, objects, and arrays", () => {
+    expect(isPublishedTrue("yes")).toBe(false);
+    expect(isPublishedTrue({})).toBe(false);
+    expect(isPublishedTrue([])).toBe(false);
+  });
+});
+
+describe("slugFromFilename (US-159)", () => {
+  it("converts a snake_case markdown filename to kebab-case", () => {
+    expect(slugFromFilename("Story_Editor.md")).toBe("story-editor");
+  });
+
+  it("converts a multi-word snake_case filename", () => {
+    expect(slugFromFilename("AI_Shot_Generation.md")).toBe(
+      "ai-shot-generation",
+    );
+  });
+
+  it("handles a single-word filename", () => {
+    expect(slugFromFilename("Storyboard.md")).toBe("storyboard");
+  });
+
+  it("strips a .mdx extension as well as .md", () => {
+    expect(slugFromFilename("Storyboard.mdx")).toBe("storyboard");
+  });
+
+  it("lowercases mixed-case filenames", () => {
+    expect(slugFromFilename("MixedCase.md")).toBe("mixedcase");
+  });
+
+  it("collapses runs of punctuation into single dashes", () => {
+    expect(slugFromFilename("Story___Editor.md")).toBe("story-editor");
+  });
+
+  it("rejects an empty filename", () => {
+    expect(() => slugFromFilename("")).toThrow(/non-empty/);
+  });
+
+  it("rejects a filename that produces an empty slug", () => {
+    expect(() => slugFromFilename("---.md")).toThrow(/empty slug/);
+  });
+});
+
+describe("stripMarketingSkipSections (US-159)", () => {
+  it("removes a single marketing-skip block including the markers", () => {
+    const md = [
+      "# Story Editor",
+      "",
+      "Marketing copy.",
+      "",
+      "<!-- marketing-skip -->",
+      "## User Stories",
+      "",
+      "- [US-049](../path)",
+      "<!-- /marketing-skip -->",
+      "",
+      "More marketing copy.",
+    ].join("\n");
+    const out = stripMarketingSkipSections(md);
+    expect(out).not.toContain("User Stories");
+    expect(out).not.toContain("US-049");
+    expect(out).not.toContain("marketing-skip");
+    expect(out).toContain("Marketing copy.");
+    expect(out).toContain("More marketing copy.");
+  });
+
+  it("removes multiple marketing-skip blocks", () => {
+    const md = [
+      "Visible 1.",
+      "<!-- marketing-skip -->",
+      "Hidden 1.",
+      "<!-- /marketing-skip -->",
+      "Visible 2.",
+      "<!-- marketing-skip -->",
+      "Hidden 2.",
+      "<!-- /marketing-skip -->",
+      "Visible 3.",
+    ].join("\n");
+    const out = stripMarketingSkipSections(md);
+    expect(out).not.toContain("Hidden 1.");
+    expect(out).not.toContain("Hidden 2.");
+    expect(out).toContain("Visible 1.");
+    expect(out).toContain("Visible 2.");
+    expect(out).toContain("Visible 3.");
+  });
+
+  it("tolerates whitespace inside the markers", () => {
+    const md = "Visible.\n<!--    marketing-skip   -->\nHidden.\n<!--   /marketing-skip   -->\nVisible.";
+    const out = stripMarketingSkipSections(md);
+    expect(out).not.toContain("Hidden.");
+  });
+
+  it("is non-greedy across multiple blocks", () => {
+    const md = "<!-- marketing-skip -->A<!-- /marketing-skip -->Keep<!-- marketing-skip -->B<!-- /marketing-skip -->";
+    const out = stripMarketingSkipSections(md);
+    expect(out).toBe("Keep");
+  });
+
+  it("leaves ordinary HTML comments alone", () => {
+    const md = "<!-- regular comment --> visible";
+    expect(stripMarketingSkipSections(md)).toBe(md);
+  });
+
+  it("returns input unchanged when there are no marketing-skip blocks", () => {
+    const md = "# Title\n\nBody.";
+    expect(stripMarketingSkipSections(md)).toBe(md);
   });
 });

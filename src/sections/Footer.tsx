@@ -50,6 +50,14 @@ export const Footer = () => {
               </li>
               <li>
                 <a
+                  href="/features/"
+                  className="text-graphite-300 transition-colors hover:text-ember-400 focus-visible:text-ember-400"
+                >
+                  Features
+                </a>
+              </li>
+              <li>
+                <a
                   href="/privacy/"
                   className="text-graphite-300 transition-colors hover:text-ember-400 focus-visible:text-ember-400"
                 >

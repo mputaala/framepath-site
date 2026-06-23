@@ -40,7 +40,30 @@
 //            id -> { avif, webp, png, thumb, width, height, alt, priority }.
 //       Fails the build on missing sources, id collisions, AVIF budget
 //       regressions, or write failures.
-//   - markdown-directory-with-frontmatter-gate (US-159, deferred): PENDING.
+//   - markdown-directory-with-frontmatter-gate (US-159, Features):
+//       For every *.md file under the source directory:
+//         1. Parse YAML frontmatter via gray-matter.
+//         2. STRICT gate — include only if `published === true` (the JS
+//            literal Boolean). `published: "true"` (string),
+//            `published: 1`, missing frontmatter all → excluded silently
+//            (logged as SKIP). The gate is the marketing-review chokepoint
+//            from Epic 30: never auto-publish a feature doc by default.
+//         3. Slug from the source filename: lowercase + kebab-case
+//            (`Story_Editor.md` → `story-editor`).
+//         4. Body transforms (applied in order):
+//             a. Strip everything between `<!-- marketing-skip -->` and
+//                `<!-- /marketing-skip -->` (wraps internal-only sections
+//                like User Story link lists or Sprint refs).
+//             b. Strip lines beginning with `<!-- internal:`.
+//             c. Strip deny-listed markdown links (anchor text retained).
+//             d. Normalise CommonMark autolinks for MDX compatibility.
+//         5. Frontmatter block: { title, summary, slug, sourceFile,
+//            published: true }; title from frontmatter or first H1.
+//         6. Write to <destination>/<slug>.mdx; fail on slug collision.
+//       Clean-rebuild semantics: the destination is rm-rf'd at handler
+//       start so a previously-published feature flipped to
+//       published: false (or deleted upstream) disappears on the next
+//       sync, not just for the current sync's writes.
 //   - markdown-file        (US-160, deferred): logged as PENDING.
 //
 // Usage:
@@ -312,6 +335,160 @@ const handleMarkdownDirectory = async ({
   return written;
 };
 
+/* ─── markdown-directory-with-frontmatter-gate (US-159, Features) ───────── */
+
+/**
+ * Strip everything between `<!-- marketing-skip -->` and `<!-- /marketing-skip
+ * -->` (inclusive of the markers). Used in dev-repo feature docs to wrap
+ * internal-only sections — the User Stories link list, dev-tooling notes,
+ * Sprint references — so the synced marketing surface omits them. Multi-line,
+ * non-greedy.
+ */
+export const stripMarketingSkipSections = (markdown) => {
+  return markdown.replace(
+    /<!--\s*marketing-skip\s*-->[\s\S]*?<!--\s*\/marketing-skip\s*-->/g,
+    "",
+  );
+};
+
+/**
+ * Convert a feature filename (e.g., `Story_Editor.md`) into a kebab-case
+ * slug (`story-editor`). Used by the published-gate handler. Strips the
+ * `.md` / `.mdx` extension, lowercases, and collapses runs of non-
+ * alphanumeric characters to single dashes.
+ */
+export const slugFromFilename = (filename) => {
+  if (typeof filename !== "string" || filename.trim().length === 0) {
+    throw new Error("slugFromFilename: filename must be a non-empty string");
+  }
+  const base = filename.replace(/\.(mdx?|MDX?)$/, "");
+  const slug = base
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  if (slug.length === 0) {
+    throw new Error(
+      `slugFromFilename: '${filename}' produced an empty slug`,
+    );
+  }
+  return slug;
+};
+
+/**
+ * True only when `value` is literally the JavaScript Boolean `true`. The
+ * string "true", the number 1, etc. all return false. This is the
+ * frontmatter gate's strictness requirement — accidentally publishing a
+ * feature because someone wrote `published: "true"` is a marketing-review
+ * bypass.
+ */
+export const isPublishedTrue = (value) => value === true;
+
+const handleMarkdownDirectoryWithFrontmatterGate = async ({
+  entry,
+  resolvedSource,
+  siteRoot,
+  slugRegistry,
+}) => {
+  let entries;
+  try {
+    entries = await readdir(resolvedSource, { withFileTypes: true });
+  } catch (err) {
+    throw new Error(
+      `${entry.id ?? entry.source}: source directory unreadable: ${err.message}`,
+    );
+  }
+
+  const mdFiles = entries
+    .filter((d) => d.isFile() && extname(d.name).toLowerCase() === ".md")
+    .map((d) => d.name)
+    .sort();
+
+  if (mdFiles.length === 0) {
+    // Empty source dir is allowed for the features gate — it just means
+    // nothing has been promoted to marketing yet. Logged for visibility.
+    console.log(
+      `  EMPTY  ${entry.id ?? entry.source}: no *.md files in ${resolvedSource}`,
+    );
+  }
+
+  const destinationRoot = resolve(siteRoot, entry.destination);
+  // Clean rebuild so a feature flipped to published: false (or deleted)
+  // doesn't leave a stale .mdx behind.
+  await rm(destinationRoot, { recursive: true, force: true });
+  await mkdir(destinationRoot, { recursive: true });
+
+  const written = [];
+  const excluded = [];
+  for (const fileName of mdFiles) {
+    const sourcePath = join(resolvedSource, fileName);
+    let raw;
+    try {
+      raw = await readFile(sourcePath, "utf8");
+    } catch (err) {
+      throw new Error(`${fileName}: read failed: ${err.message}`);
+    }
+    if (raw.trim().length === 0) {
+      // Empty file isn't an error here — just skip it.
+      excluded.push({ fileName, reason: "empty file" });
+      continue;
+    }
+
+    const parsed = matter(raw);
+    const fm = parsed.data ?? {};
+
+    if (!isPublishedTrue(fm.published)) {
+      excluded.push({
+        fileName,
+        reason: `published gate (value: ${JSON.stringify(fm.published)})`,
+      });
+      continue;
+    }
+
+    const title = fm.title ?? findFirstH1(parsed.content);
+    if (!title) {
+      throw new Error(
+        `${fileName}: published feature missing title — no frontmatter title and no H1 in body`,
+      );
+    }
+
+    const summary = typeof fm.summary === "string" ? fm.summary.trim() : "";
+
+    const slug = slugFromFilename(fileName);
+    if (slugRegistry.has(slug)) {
+      const other = slugRegistry.get(slug);
+      throw new Error(
+        `slug collision: '${slug}' produced by both ${other} and ${fileName}`,
+      );
+    }
+    slugRegistry.set(slug, fileName);
+
+    const cleanedBody = normaliseAutolinks(
+      stripDenyListedLinks(
+        stripInternalComments(stripMarketingSkipSections(parsed.content)),
+      ),
+    );
+
+    const meta = {
+      title,
+      summary,
+      slug,
+      sourceFile: fileName,
+      published: true,
+    };
+    const out = renderFrontmatter(meta) + cleanedBody.replace(/^\s+/, "");
+    const destPath = join(destinationRoot, `${slug}.mdx`);
+    await writeFile(destPath, out, "utf8");
+    written.push({ slug, sourceFile: fileName, destination: destPath });
+  }
+
+  for (const x of excluded) {
+    console.log(`  SKIP   ${entry.id ?? entry.source}: ${x.fileName} (${x.reason})`);
+  }
+  return written;
+};
+
 /* ─── image-allowlist transform (US-158, Screenshots) ───────────────────── */
 
 /**
@@ -515,10 +692,11 @@ const handleImageAllowlist = async ({
 const KIND_HANDLERS = {
   "markdown-directory": handleMarkdownDirectory,
   "image-allowlist": handleImageAllowlist,
+  "markdown-directory-with-frontmatter-gate":
+    handleMarkdownDirectoryWithFrontmatterGate,
 };
 
 const PENDING_KINDS = new Set([
-  "markdown-directory-with-frontmatter-gate", // US-159
   "markdown-file", // US-160
 ]);
 
@@ -556,7 +734,7 @@ const main = async (argv) => {
     process.exit(2);
   }
 
-  console.log(`sync-content (US-155 + US-156 + US-158).`);
+  console.log(`sync-content (US-155 + US-156 + US-158 + US-159).`);
   console.log(`  dev-repo root: ${opts.devRepoRoot}`);
   console.log(`  allowlist:     ${ALLOWLIST_PATH}`);
   console.log(`  sources:       ${sources.length}`);
