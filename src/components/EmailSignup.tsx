@@ -10,10 +10,14 @@
 //   1. JS-enabled (default): onSubmit intercepts, fetch()es the endpoint
 //      with mode: "no-cors" (Buttondown doesn't expose CORS), and shows
 //      the in-place success state without navigating. mode: "no-cors"
-//      makes the response opaque, so we treat "fetch resolved without
-//      throwing" as "submission accepted" — Buttondown will email or
-//      not as it sees fit; the user sees the same "check your inbox"
-//      copy either way.
+//      makes the response opaque — *we cannot tell whether Buttondown
+//      accepted the submission*, only whether the request reached the
+//      network. Issue mputaala/Frame#290 hit this trade-off head-on: a
+//      404 from a missing Buttondown account looked identical to a 202
+//      "queued for DOI" in the client. The success copy below therefore
+//      hedges deliberately — it tells the visitor what *should* happen,
+//      provides an unambiguous timeout window, and surfaces an email
+//      escape hatch so silent provider failures don't strand them.
 //   2. JS-disabled fallback: the form's native `action` + `target="_blank"`
 //      sends the POST to Buttondown directly, which returns Buttondown's
 //      hosted success / error page in a new tab. The framepath.fi page
@@ -88,12 +92,11 @@ export const EmailSignup = ({ variant = "hero" }: EmailSignupProps) => {
       const formData = new FormData();
       formData.append("email", email);
       formData.append("tag", BUTTONDOWN_SOURCE_TAG);
-      // Buttondown's embed endpoint does not expose CORS headers. We
-      // submit no-cors and treat a non-throwing fetch as a successful
-      // hand-off — Buttondown's own double-opt-in email is what actually
-      // confirms the subscription. The user sees the same "check your
-      // inbox" copy regardless of whether the address is fresh or a
-      // re-submit (Buttondown is the source of truth on duplicates).
+      // Buttondown's embed endpoint does not expose CORS headers, so the
+      // response is opaque. A non-throwing fetch only proves the request
+      // hit the network — not that Buttondown accepted it. The success
+      // copy reflects that uncertainty; see the preamble for the full
+      // rationale (mputaala/Frame#290).
       await fetch(BUTTONDOWN_EMBED_SUBSCRIBE_URL, {
         method: "POST",
         mode: "no-cors",
@@ -122,10 +125,17 @@ export const EmailSignup = ({ variant = "hero" }: EmailSignupProps) => {
         }
       >
         <p className="text-sm font-semibold text-graphite-50">
-          Check your inbox.
+          Submission received.
         </p>
         <p className="mt-2 text-sm text-graphite-300">
-          We sent you a confirmation email — click the link inside to finish signing up. No subscription is active until you confirm.
+          Buttondown should email you a confirmation link within a few minutes — click it to finish signing up. No subscription is active until you confirm. If nothing arrives within five minutes, please email{" "}
+          <a
+            href="mailto:mputaala@me.com"
+            className="text-ember-400 underline hover:text-ember-300 focus-visible:text-ember-300"
+          >
+            mputaala@me.com
+          </a>
+          .
         </p>
       </div>
     );
