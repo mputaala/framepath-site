@@ -12,14 +12,14 @@
     },
     {
       "id": "write-mac",
-      "source": "Documentation/User Guide/Assets/Screenshots/04 — Writing Your Scenes/Final/04.1_Write_stage_with_one_scene_open.png",
-      "alt": "Scene Editor on Mac — a Fountain-formatted scene open for editing in the Write stage.",
+      "source": "Documentation/User Guide/Assets/Screenshots/04 — Writing Your Scenes/Final/04.5_Write_stage_with_the_Show_Script_inspector_panel_open.png",
+      "alt": "Write stage on Mac — the element editor on the left with the Show Script inspector panel rendering the formatted screenplay alongside.",
       "priority": false
     },
     {
       "id": "plan-mac",
-      "source": "Documentation/User Guide/Assets/Screenshots/09 — Managing Shots/Final/09.3_Three_shot_cards_side_by_side.png",
-      "alt": "Plan stage on Mac — three annotated shot cards side by side showing size, angle, and storyboard frame.",
+      "source": "Documentation/User Guide/Assets/Screenshots/09 — Managing Shots/Final/09.12_Shot_list_grid_on_Mac.png",
+      "alt": "Plan stage on Mac — the shot list grid showing the full column layout with status, shot number, board, production fields, headline, and description.",
       "priority": false
     },
     {
@@ -30,8 +30,8 @@
     },
     {
       "id": "shoot-ipad",
-      "source": "Documentation/User Guide/Assets/Screenshots/12 — Shoot Mode/Final/12.1_Shoot_mode_on_iPad.png",
-      "alt": "Shoot Mode on iPad — current shot, scene context, and clapperboard side by side, ready for set.",
+      "source": "Documentation/User Guide/Assets/Screenshots/12 — Shoot Mode/Final/12.3_Shot_list_in_Shoot_mode_on_iPad.png",
+      "alt": "Shoot Mode on iPad — the shot list with enlarged status circles and storyboard thumbnails, ready for set.",
       "priority": false
     }
   ]
