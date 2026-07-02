@@ -23,12 +23,6 @@
       "priority": false
     },
     {
-      "id": "storyboard-mac",
-      "source": "Documentation/User Guide/Assets/Screenshots/10 — Storyboarding/Final/10.1_Board_view_on_Mac.png",
-      "alt": "Storyboard board view on Mac — hand-drawn frames arranged in shot order across the scene.",
-      "priority": false
-    },
-    {
       "id": "shoot-ipad",
       "source": "Documentation/User Guide/Assets/Screenshots/12 — Shoot Mode/Final/12.3_Shot_list_in_Shoot_mode_on_iPad.png",
       "alt": "Shoot Mode on iPad — the shot list with enlarged status circles and storyboard thumbnails, ready for set.",
