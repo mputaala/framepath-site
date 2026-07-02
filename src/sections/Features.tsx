@@ -28,7 +28,7 @@ const FEATURES: Feature[] = [
     stage: "Shoot",
     title: "Run the shoot from your iPad.",
     description:
-      "Mark shots complete in shoot mode, capture reference photos for the editor, and keep the day moving without juggling spreadsheets.",
+      "Mark shots complete in shoot mode, slate with the built-in clapperboard, and keep the day moving without juggling spreadsheets.",
     screenshotId: "shoot-ipad",
   },
 ];
