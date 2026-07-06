@@ -37,6 +37,17 @@ concurrency:
 
 jobs:
   lighthouse-ci:
+    # Dependabot PRs run with a restricted GITHUB_TOKEN and no access to
+    # repository secrets, so `secrets.FRAME_CONTENT_TOKEN` is empty and
+    # the cross-repo sparse checkout of `mputaala/Frame` below aborts
+    # with "Input required and not supplied: token". Dependency-bump PRs
+    # only touch package.json / package-lock.json and can't materially
+    # regress the Lighthouse budget on their own; the tests workflow
+    # (which does not need the cross-repo token) still runs and gates
+    # the PR. Post-merge Lighthouse on main catches any real regression
+    # before it ships. If a specific Dependabot bump needs Lighthouse
+    # verification, rebase it as a manual PR and this job runs normally.
+    if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout site repo
