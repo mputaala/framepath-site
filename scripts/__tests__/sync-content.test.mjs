@@ -15,6 +15,7 @@ import {
   normaliseAutolinks,
   renderFrontmatter,
   resolveSourcePath,
+  selfCloseHtmlVoidTags,
   shiftHeadingsByOne,
   slugFromFilename,
   slugFromHeading,
@@ -493,6 +494,57 @@ describe("escapeMdxUnsafeAngles (US-159 MDX compatibility)", () => {
 
   it("leaves `<_underscore>` style starts alone", () => {
     expect(escapeMdxUnsafeAngles("<_internal>")).toBe("<_internal>");
+  });
+});
+
+describe("selfCloseHtmlVoidTags (mputaala/Frame#317 follow-up — MDX 3 compatibility)", () => {
+  it("rewrites a bare `<img src=\"…\">` to self-closing", () => {
+    expect(selfCloseHtmlVoidTags('<img src="a.png" alt="A">')).toBe(
+      '<img src="a.png" alt="A" />',
+    );
+  });
+
+  it("leaves an already-self-closing `<img … />` untouched (idempotent)", () => {
+    expect(selfCloseHtmlVoidTags('<img src="a.png" alt="A" />')).toBe(
+      '<img src="a.png" alt="A" />',
+    );
+  });
+
+  it("preserves attribute order and whitespace", () => {
+    const input = '<img\n  src="a.png"\n  width="620"\n  alt="A">';
+    expect(selfCloseHtmlVoidTags(input)).toBe(
+      '<img\n  src="a.png"\n  width="620"\n  alt="A" />',
+    );
+  });
+
+  it("rewrites multiple `<img>` on the same line independently", () => {
+    expect(
+      selfCloseHtmlVoidTags(
+        '<img src="a.png" alt="A"> and <img src="b.png" alt="B">',
+      ),
+    ).toBe('<img src="a.png" alt="A" /> and <img src="b.png" alt="B" />');
+  });
+
+  it("leaves non-`img` tags alone (scope is intentionally narrow)", () => {
+    expect(selfCloseHtmlVoidTags("<br>")).toBe("<br>");
+    expect(selfCloseHtmlVoidTags("<hr>")).toBe("<hr>");
+    expect(selfCloseHtmlVoidTags("<Callout>hi</Callout>")).toBe(
+      "<Callout>hi</Callout>",
+    );
+  });
+
+  it("handles a `<img>` with no attributes", () => {
+    expect(selfCloseHtmlVoidTags("<img>")).toBe("<img />");
+  });
+
+  it("leaves prose that mentions `<img>` in a code span alone-ish (the transform is regex-only; consumers must accept that)", () => {
+    // A trailing paragraph mention of the tag is rewritten too — this is
+    // intentional; the surface is user-guide chapters, where `<img>` in
+    // prose is vanishingly rare. Fenced code blocks pass through the
+    // per-line transforms upstream, so this transform never sees them.
+    expect(selfCloseHtmlVoidTags("prose about <img> tags")).toBe(
+      "prose about <img /> tags",
+    );
   });
 });
 

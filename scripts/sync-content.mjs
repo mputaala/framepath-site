@@ -303,6 +303,29 @@ export const escapeMdxUnsafeAngles = (markdown) => {
 };
 
 /**
+ * Rewrite non-self-closing HTML void tags to their JSX-safe self-closing
+ * form. MDX 3 (under @next/mdx, especially with Turbopack) parses HTML
+ * tags as JSX and demands that void elements terminate as `<tag ... />`;
+ * a bare `<img src="x">` raises "Expected a closing tag" and aborts the
+ * build. The User Guide chapters use `<img>` heavily for inline SF-Symbol
+ * icons and screenshot embeds — every one of those needs the trailing
+ * slash before MDX 3 accepts it.
+ *
+ * Scope: `<img>` only. Adding `<br>`, `<hr>`, `<input>` etc. is a matter
+ * of extending the alternation below; do it when authors actually reach
+ * for them.
+ *
+ * Idempotent: an already-self-closing `<img ... />` is left untouched
+ * because the captured attribute group's trimmed tail ends in `/`.
+ */
+export const selfCloseHtmlVoidTags = (markdown) => {
+  return markdown.replace(/<img\b([^>]*)>/g, (match, attrs) => {
+    if (attrs.trimEnd().endsWith("/")) return match;
+    return `<img${attrs} />`;
+  });
+};
+
+/**
  * Remove every line starting with `<!-- internal:` (after optional leading
  * whitespace). Used to scrub maintainer-internal notes the dev repo might
  * carry inline in published policies.
@@ -761,7 +784,8 @@ const handleMarkdownFile = async ({
  *   4. stripDenyListedLinks
  *   5. normaliseAutolinks
  *   6. escapeMdxUnsafeAngles
- *   7. shiftHeadingsByOne          (H1 → H2 etc.)
+ *   7. selfCloseHtmlVoidTags        (`<img …>` → `<img … />`)
+ *   8. shiftHeadingsByOne          (H1 → H2 etc.)
  *
  * Output frontmatter: `{ title: "User Guide", sourceFiles: [...] }`.
  * toc.json is generated from the resulting H2 list — i.e. the chapter
@@ -815,14 +839,16 @@ const handleMarkdownDirectoryCollated = async ({
 
     const parsed = matter(raw);
     const cleaned = shiftHeadingsByOne(
-      escapeMdxBraces(
-        escapeMdxUnsafeAngles(
-          normaliseAutolinks(
-            stripDenyListedLinks(
-              stripAllHtmlComments(
-                stripScreenshotPlaceholders(
-                  stripInternalComments(
-                    stripMarketingSkipSections(parsed.content),
+      selfCloseHtmlVoidTags(
+        escapeMdxBraces(
+          escapeMdxUnsafeAngles(
+            normaliseAutolinks(
+              stripDenyListedLinks(
+                stripAllHtmlComments(
+                  stripScreenshotPlaceholders(
+                    stripInternalComments(
+                      stripMarketingSkipSections(parsed.content),
+                    ),
                   ),
                 ),
               ),
