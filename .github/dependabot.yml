@@ -18,6 +18,18 @@ updates:
       include: "scope"
     labels:
       - "dependencies"
+    # Major bumps that require a deliberate migration project — not
+    # something Dependabot can land mechanically. Adding them here
+    # keeps the PR list free of noise until an engineer picks up the
+    # migration. Remove the entry when starting the migration; a
+    # rebased major-bump PR will then appear on the next Monday run.
+    ignore:
+      # Tailwind 4 is a full rewrite: `tailwind.config.js` retired in
+      # favour of CSS `@theme` / `@config`; `@tailwind base/components/
+      # utilities` becomes `@import "tailwindcss"`; PostCSS plugin
+      # split into `@tailwindcss/postcss`. See closed PR #8.
+      - dependency-name: "tailwindcss"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
