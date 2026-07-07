@@ -45,7 +45,7 @@ export const Features = () => {
             id="features-heading"
             className="text-3xl font-semibold tracking-extra-tight text-graphite-50 sm:text-4xl"
           >
-            From the page to the call sheet.
+            From the page to the clapperboard.
           </h2>
           <p className="mt-4 text-pretty text-lg text-graphite-300">
             FramePath covers the three stages of an indie shoot in one app.
