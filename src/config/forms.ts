@@ -43,3 +43,27 @@ export const FORMSPREE_CONTACT_THANKS_URL =
  *  case so a visitor doesn't experience a broken submit silently. */
 export const isFormspreePlaceholder = () =>
   FORMSPREE_FORM_ID.includes("PLACEHOLDER");
+
+// --------------------------------------------------------------------------- //
+// Support form — submit_feedback_http Cloud Function (Bet 4 Stage 4).
+//
+// The /support form POSTs JSON directly to the FramePath support Cloud
+// Function (`submit_feedback_http`, region europe-west1), which creates a
+// GitHub issue in mputaala/framepath-support. Because framepath.fi is a
+// static export there is no server / API-route proxy, so the function grants
+// CORS to the framepath.fi origins directly.
+//
+// The deployed URL is injected at build time via NEXT_PUBLIC_SUBMIT_FEEDBACK_URL
+// (NEXT_PUBLIC_ so it is inlined into the static bundle). Until it is set the
+// placeholder triggers a graceful "being provisioned" notice on the page —
+// like the Formspree placeholder path — so a visitor never hits a silent
+// broken submit.
+// --------------------------------------------------------------------------- //
+
+export const SUBMIT_FEEDBACK_URL =
+  process.env.NEXT_PUBLIC_SUBMIT_FEEDBACK_URL ??
+  "PLACEHOLDER_SUBMIT_FEEDBACK_URL";
+
+/** Returns true when the support endpoint URL is still the placeholder. */
+export const isSupportEndpointPlaceholder = () =>
+  SUBMIT_FEEDBACK_URL.includes("PLACEHOLDER");
