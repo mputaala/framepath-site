@@ -103,6 +103,12 @@ jobs:
 
       - name: Build static export
         run: npm run build
+        env:
+          # Inlined at build time by Next.js (NEXT_PUBLIC_*). Points the /support
+          # form at the deployed submit_feedback_http Cloud Function. Configured as
+          # a repo variable (Settings → Secrets and variables → Actions → Variables);
+          # when unset the form falls back to an email link (see src/config/forms.ts).
+          NEXT_PUBLIC_SUBMIT_FEEDBACK_URL: ${{ vars.NEXT_PUBLIC_SUBMIT_FEEDBACK_URL }}
 
       - name: Configure Pages
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d  # v6.0.0
