@@ -31,7 +31,7 @@ export const TestFlightLink = ({
 
   const variantClasses =
     variant === "link"
-      ? "inline-flex items-center text-sm text-graphite-400 underline-offset-4 hover:text-ember-400 hover:underline focus-visible:text-ember-400"
+      ? "inline-flex items-center text-sm text-graphite-300 underline-offset-4 hover:text-ember-400 hover:underline focus-visible:text-ember-400"
       : "inline-flex h-14 items-center justify-center rounded-xl border border-graphite-600 bg-transparent px-6 text-base font-semibold text-graphite-50 transition-colors hover:border-ember-400 hover:text-ember-400 focus-visible:border-ember-400 focus-visible:text-ember-400";
 
   return (
