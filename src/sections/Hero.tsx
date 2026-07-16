@@ -26,9 +26,14 @@ export const Hero = () => {
 
       <Container className="relative z-10">
         <div className="mx-auto max-w-3xl text-center">
+          {/* Launch eyebrow — a styled <p>, not a heading, so document
+              heading order stays H1-first (Lighthouse a11y). */}
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-ember-400">
+            Now on the App Store
+          </p>
           <h1
             id="hero-heading"
-            className="text-balance text-4xl font-semibold tracking-extra-tight text-graphite-50 sm:text-5xl md:text-6xl"
+            className="mt-4 text-balance text-4xl font-semibold tracking-extra-tight text-graphite-50 sm:text-5xl md:text-6xl"
           >
             {TAGLINE}
           </h1>
@@ -36,15 +41,16 @@ export const Hero = () => {
             {SUB_TAGLINE}
           </p>
 
-          <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+          {/* App Store badge is the primary download; the TestFlight beta is
+              demoted to a subordinate text link for testers of upcoming
+              versions (post-1.0.2-launch). */}
+          <div className="mt-10 flex flex-col items-center justify-center gap-4">
             <AppStoreBadge href={APP_STORE_URL} />
-            <TestFlightLink href={TESTFLIGHT_URL} />
+            <TestFlightLink href={TESTFLIGHT_URL} variant="link" />
           </div>
 
-          {/* US-161 newsletter signup — embedded in the hero so the
-              waitlist-conversion surface is one viewport away from the
-              tagline. Footer carries a smaller variant for visitors who
-              scroll past without converting. */}
+          {/* US-161 newsletter signup — one viewport from the tagline.
+              Footer carries a smaller variant for visitors who scroll past. */}
           <EmailSignup variant="hero" />
         </div>
 
