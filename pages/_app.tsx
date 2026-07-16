@@ -6,6 +6,7 @@ import Head from "next/head";
 
 import { Analytics } from "../src/components/Analytics";
 import { mdxComponents } from "../src/components/mdx";
+import { Header } from "../src/sections/Header";
 
 const App = ({ Component, pageProps }: AppProps) => {
   return (
@@ -19,6 +20,9 @@ const App = ({ Component, pageProps }: AppProps) => {
           href="/icons/apple-touch-icon.png"
         />
       </Head>
+      {/* Stationary global navigation (framepath-support#3). Rendered here so
+          every route shares one sticky toolbar above its own <main>/<Footer>. */}
+      <Header />
       <Component {...pageProps} />
       {/* Cloudflare Web Analytics (US-162). Cookieless, no fingerprint,
           no consent banner. Renders nothing while the beacon token in
