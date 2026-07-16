@@ -59,14 +59,14 @@ type EmailSignupProps = {
   variant?: "hero" | "footer";
 };
 
-const HERO_HEADLINE = "Be there at launch.";
+const HERO_HEADLINE = "Stay in the loop.";
 const HERO_BLURB =
-  "Get a single email when FramePath ships on the App Store. No spam, no other lists, no third-party tracking.";
+  "Get an occasional email on new features and behind-the-scenes notes. No spam, no other lists, no third-party tracking.";
 const FOOTER_HEADLINE = "Newsletter";
 const FOOTER_BLURB =
-  "One email at launch. Unsubscribe with one click.";
+  "Occasional product updates. Unsubscribe with one click.";
 
-const CONSENT_LABEL_PREFIX = "I agree to receive the FramePath newsletter — launch updates and the occasional behind-the-scenes note. I can unsubscribe any time via the link in every email. See the ";
+const CONSENT_LABEL_PREFIX = "I agree to receive the FramePath newsletter — product updates and the occasional behind-the-scenes note. I can unsubscribe any time via the link in every email. See the ";
 const CONSENT_LABEL_LINK_TEXT = "Privacy Policy";
 const CONSENT_LABEL_SUFFIX = " for details.";
 
