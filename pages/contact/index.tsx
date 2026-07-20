@@ -1,51 +1,42 @@
-// US-161 Sprint 29 Prompt 7 — /contact page.
+// US-213 (Sprint 49) — /contact has migrated to /support.
 //
-// Static page hosting the ContactForm. Submission flow:
-//   user → fills form → POST to Formspree → Formspree validates +
-//   filters + delivers to mailbox → 302 to /contact/thanks/.
-//
-// No JS required for the submit path; the form's native action
-// attribute carries the work. The page therefore renders identically
-// with JavaScript enabled or disabled, satisfying the prompt's no-JS
-// fallback AC.
+// The Formspree-backed contact form is superseded by the /support form, which
+// posts into FramePath's own support backend (submit_feedback_http). GitHub
+// Pages serves a static export, so a true HTTP 301 is not available; this
+// page is the standard static-hosting equivalent — an instant
+// <meta http-equiv="refresh">, a rel=canonical consolidating search signals
+// on /support/, and a visible fallback link for user agents that ignore meta
+// refresh. The Header/Footer nav and the sitemap point straight at /support/.
+
+import Head from "next/head";
 
 import { Container } from "../../src/components/Container";
-import { ContactForm } from "../../src/components/ContactForm";
-import { SEO } from "../../src/components/SEO";
-import { Footer } from "../../src/sections/Footer";
 
-const PAGE_TITLE = "Contact · FramePath";
-const PAGE_DESCRIPTION =
-  "Questions about FramePath, press enquiries, or feedback — send us a note.";
-const CANONICAL_URL = "https://framepath.fi/contact/";
+const REDIRECT_TARGET = "/support/";
+const CANONICAL_URL = "https://framepath.fi/support/";
 
-const ContactPage = () => {
-  return (
-    <>
-      <SEO
-        title={PAGE_TITLE}
-        description={PAGE_DESCRIPTION}
-        canonicalUrl={CANONICAL_URL}
-      />
-      <main className="py-16 sm:py-20">
-        <Container className="max-w-2xl">
-          <header className="mx-auto max-w-xl text-center">
-            <h1 className="text-3xl font-semibold tracking-extra-tight text-graphite-50 sm:text-4xl">
-              Contact
-            </h1>
-            <p className="mt-4 text-pretty text-base text-graphite-300">
-              Questions about FramePath, press enquiries, or feedback. We answer most messages within five working days.
-            </p>
-          </header>
+const ContactRedirectPage = () => (
+  <>
+    <Head>
+      <title>Support · FramePath</title>
+      <meta httpEquiv="refresh" content={`0; url=${REDIRECT_TARGET}`} />
+      <link rel="canonical" href={CANONICAL_URL} />
+    </Head>
+    <main className="py-16 sm:py-20">
+      <Container className="max-w-2xl text-center">
+        <p className="text-base text-graphite-300">
+          Our contact page has moved.{" "}
+          <a
+            href={REDIRECT_TARGET}
+            className="text-ember-400 underline hover:text-ember-300 focus-visible:text-ember-300"
+          >
+            Continue to Support
+          </a>
+          .
+        </p>
+      </Container>
+    </main>
+  </>
+);
 
-          <div className="mt-10">
-            <ContactForm />
-          </div>
-        </Container>
-      </main>
-      <Footer />
-    </>
-  );
-};
-
-export default ContactPage;
+export default ContactRedirectPage;
