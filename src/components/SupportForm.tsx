@@ -13,14 +13,19 @@
 // degrades to an email escape hatch (support@framepath.fi), mirroring the
 // ContactForm placeholder behaviour so a visitor is never stranded.
 //
-// hCaptcha is intentionally not wired yet: the backend already enforces a
-// 5/hour + 20/day rolling rate limit per IP, which is the baseline abuse
-// defence for launch. A captcha can be added later without changing this
-// component's shape.
+// The form is captcha-gated with ALTCHA (US-213) — a self-hosted, MIT-licensed
+// proof-of-work captcha, chosen over hCaptcha because it is cookieless (Epic
+// 30's no-cookies / no-consent-banner AC) and adds no third-party processor.
+// The widget GETs a signed challenge from the same Cloud Function URL, solves
+// it invisibly in the browser, and the solved payload is POSTed alongside the
+// form fields as `altcha`; the function verifies it server-side and rejects
+// missing, invalid, expired, or replayed payloads. The backend additionally
+// enforces a 5/hour + 20/day rolling rate limit per IP.
 //
-// No cookies: this component never reads or writes document.cookie.
+// No cookies: neither this component nor the ALTCHA widget reads or writes
+// document.cookie.
 
-import { useId, useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 
 import {
   SUBMIT_FEEDBACK_URL,
@@ -70,8 +75,31 @@ export const SupportForm = () => {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<SubmitStatus>("idle");
   const [errorMessage, setErrorMessage] = useState("");
+  // The solved ALTCHA payload (base64). Empty until the widget reports
+  // `verified`; cleared again if the widget expires or resets.
+  const [altchaPayload, setAltchaPayload] = useState("");
+  const altchaRef = useRef<HTMLElement>(null);
 
   const placeholder = isSupportEndpointPlaceholder();
+
+  // Register the <altcha-widget> web component client-side only (it touches
+  // window/DOM APIs, so a top-level import would break the static export
+  // prerender) and mirror its verification state into React state.
+  useEffect(() => {
+    if (placeholder) return;
+    void import("altcha");
+    const widget = altchaRef.current;
+    if (!widget) return;
+    const onStateChange = (event: Event) => {
+      const detail = (event as CustomEvent<{ state?: string; payload?: string }>)
+        .detail;
+      setAltchaPayload(
+        detail?.state === "verified" && detail.payload ? detail.payload : "",
+      );
+    };
+    widget.addEventListener("statechange", onStateChange);
+    return () => widget.removeEventListener("statechange", onStateChange);
+  }, [placeholder]);
 
   if (placeholder) {
     return (
@@ -108,7 +136,26 @@ export const SupportForm = () => {
     summary.trim().length > 0 &&
     details.trim().length > 0 &&
     email.trim().length > 0 &&
+    altchaPayload.length > 0 &&
     status !== "submitting";
+
+  // A solved ALTCHA payload is single-use on the server, so any failed
+  // submission consumes it. Reset the widget and re-solve a fresh challenge
+  // in the background so the visitor can simply press "Send message" again.
+  const rearmCaptcha = () => {
+    setAltchaPayload("");
+    const widget = altchaRef.current as
+      | (HTMLElement & {
+          reset?: () => void;
+          verify?: () => Promise<unknown>;
+        })
+      | null;
+    widget?.reset?.();
+    void widget?.verify?.()?.catch(() => {
+      // A re-verify failure leaves the widget in its own error state; the
+      // visitor can retry it manually.
+    });
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -128,6 +175,7 @@ export const SupportForm = () => {
           submission_id: crypto.randomUUID(),
           locale:
             typeof navigator !== "undefined" ? navigator.language : undefined,
+          altcha: altchaPayload,
         }),
       });
 
@@ -150,11 +198,13 @@ export const SupportForm = () => {
         );
       }
       setStatus("error");
+      rearmCaptcha();
     } catch {
       setErrorMessage(
         "We couldn't reach the server. Please check your connection and try again, or email support@framepath.fi.",
       );
       setStatus("error");
+      rearmCaptcha();
     }
   };
 
@@ -229,6 +279,26 @@ export const SupportForm = () => {
           placeholder="you@example.com"
         />
       </div>
+
+      {/* ALTCHA proof-of-work check (US-213). `auto="onload"` fetches and
+          solves the challenge invisibly while the visitor types; the submit
+          button stays disabled until the widget reports `verified`. Colours
+          map the site palette onto the widget's shadow-DOM custom properties. */}
+      <altcha-widget
+        ref={altchaRef}
+        challenge={SUBMIT_FEEDBACK_URL}
+        auto="onload"
+        style={{
+          "--altcha-border-radius": "0.375rem",
+          "--altcha-color-base": "#111114",
+          "--altcha-color-base-content": "#f6f6f7",
+          "--altcha-color-neutral": "#27272a",
+          "--altcha-color-neutral-content": "#a3a3ab",
+          "--altcha-color-primary": "#f59e0b",
+          "--altcha-color-primary-content": "#0a0a0c",
+          "--altcha-color-error": "#fcd34d",
+        }}
+      ></altcha-widget>
 
       {status === "error" && (
         <p id={errorId} role="alert" className="text-sm text-ember-300">

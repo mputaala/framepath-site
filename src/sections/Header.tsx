@@ -17,7 +17,7 @@ import { TESTFLIGHT_URL } from "../config/links";
 const NAV_LINKS = [
   { href: "/features/", label: "Features" },
   { href: "/help/", label: "Help" },
-  { href: "/contact/", label: "Contact" },
+  { href: "/support/", label: "Support" },
 ];
 
 export const Header = () => {
