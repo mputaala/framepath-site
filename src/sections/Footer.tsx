@@ -76,10 +76,10 @@ export const Footer = () => {
               </li>
               <li>
                 <a
-                  href="/contact/"
+                  href="/support/"
                   className="text-graphite-300 transition-colors hover:text-ember-400 focus-visible:text-ember-400"
                 >
-                  Contact
+                  Support
                 </a>
               </li>
             </ul>

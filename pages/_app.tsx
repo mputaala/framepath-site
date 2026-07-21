@@ -1,4 +1,7 @@
 import "../styles/globals.css";
+// ALTCHA widget styles (US-213) — global CSS must be imported here per
+// Next.js rules; the widget itself is dynamically imported by SupportForm.
+import "altcha/altcha.css";
 
 import { MDXProvider } from "@mdx-js/react";
 import type { AppProps } from "next/app";
