@@ -6,19 +6,19 @@
   "screenshots": [
     {
       "id": "hero-mac",
-      "source": "Documentation/User Guide/Assets/Screenshots/01 — Welcome to FramePath/Final/01.1_Hero_screenshot.png",
+      "source": "Documentation/User Guide/Assets/Screenshots/01 — Welcome to FramePath/Final/01.1_Hero_screenshot.png",
       "alt": "FramePath's hero view on Mac — screenplay on the left, scene navigator in the middle, shot list on the right.",
       "priority": true
     },
     {
       "id": "write-mac",
-      "source": "Documentation/User Guide/Assets/Screenshots/04 — Writing Your Scenes/Final/04.5_Write_stage_with_the_Show_Script_inspector_panel_open.png",
+      "source": "Documentation/User Guide/Assets/Screenshots/04 — Writing Your Scenes/Final/04.5_Write_stage_with_the_Show_Script_inspector_panel_open.png",
       "alt": "Write stage on Mac — the element editor on the left with the Show Script inspector panel rendering the formatted screenplay alongside.",
       "priority": false
     },
     {
       "id": "plan-mac",
-      "source": "Documentation/User Guide/Assets/Screenshots/09 — Managing Shots/Final/09.12_Shot_list_grid_on_Mac.png",
+      "source": "Documentation/User Guide/Assets/Screenshots/09 — Managing Shots/Final/09.12_Shot_list_grid_on_Mac.png",
       "alt": "Plan stage on Mac — the shot list grid showing the full column layout with status, shot number, board, production fields, headline, and description.",
       "priority": false
     },
