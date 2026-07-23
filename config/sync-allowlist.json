@@ -22,13 +22,6 @@
       "kind": "markdown-directory-with-frontmatter-gate",
       "destination": "content/features",
       "notes": "Visitor-facing feature copy (Write / Plan / Shoot). Issue mputaala/Frame#283 corrected the source from 'Documentation/Features' (internal technical docs) to 'Documentation/Marketing' (visitor-facing copy) so the public /features pages stop showing engineering notes. Same published-gate semantics as before; an `order` frontmatter field controls index sort order (Write -> Plan -> Shoot rather than alphabetical)."
-    },
-    {
-      "id": "help-book",
-      "source": "Documentation/User Guide",
-      "kind": "markdown-directory-collated",
-      "destination": "content/help/index.mdx",
-      "notes": "User Guide chapters — files matching '^\\d{2}\\s+.+\\.md$' (e.g. '01 Welcome to FramePath.md') concatenated into a single page sorted by leading digit. Each chapter's H1 demotes to H2; HelpTOC reads the resulting H2 list. Issue mputaala/Frame#282 corrected the source from 'Documentation/Guides/Apple Help Book.md' (internal authoring guide for the bundled Apple Help Book) to the actual chapter docs. `<!-- Screenshot: ... -->' placeholders are stripped; a future PR will swap them for real <Screenshot id='...'> references."
     }
   ]
 }

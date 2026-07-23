@@ -16,7 +16,6 @@ import { TESTFLIGHT_URL } from "../config/links";
 // (Next.js `trailingSlash: true`) so no client-side redirect hop on click.
 const NAV_LINKS = [
   { href: "/features/", label: "Features" },
-  { href: "/help/", label: "Help" },
   { href: "/support/", label: "Support" },
 ];
 
