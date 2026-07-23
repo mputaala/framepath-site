@@ -60,14 +60,6 @@ export const Footer = () => {
               </li>
               <li>
                 <a
-                  href="/help/"
-                  className="text-graphite-300 transition-colors hover:text-ember-400 focus-visible:text-ember-400"
-                >
-                  Help
-                </a>
-              </li>
-              <li>
-                <a
                   href="/privacy/"
                   className="text-graphite-300 transition-colors hover:text-ember-400 focus-visible:text-ember-400"
                 >
