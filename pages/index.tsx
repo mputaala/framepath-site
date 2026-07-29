@@ -1,5 +1,6 @@
 import { SEO } from "../src/components/SEO";
 import { StructuredData } from "../src/components/StructuredData";
+import { BetaBanner } from "../src/sections/BetaBanner";
 import { Features } from "../src/sections/Features";
 import { Footer } from "../src/sections/Footer";
 import { Hero } from "../src/sections/Hero";
@@ -19,6 +20,7 @@ const Home = () => {
       />
       <StructuredData />
       <main>
+        <BetaBanner />
         <Hero />
         <Features />
       </main>
