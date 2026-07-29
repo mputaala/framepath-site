@@ -27,6 +27,12 @@
       "source": "Documentation/User Guide/Assets/Screenshots/12 — Shoot Mode/Final/12.3_Shot_list_in_Shoot_mode_on_iPad.png",
       "alt": "Shoot Mode on iPad — the shot list with enlarged status circles and storyboard thumbnails, ready for set.",
       "priority": false
+    },
+    {
+      "id": "ai-panel-coverage-setups",
+      "source": "Documentation/User Guide/Assets/Screenshots/11 — AI Shot Generation/Final/11.2.2_AI_generation_panel_on_iPad.png",
+      "alt": "FramePath AI generation panel on iPad — coverage density selector (Minimal, Standard, Full) and setup budget stepper above the Generate button.",
+      "priority": false
     }
   ]
 }
