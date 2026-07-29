@@ -29,7 +29,7 @@ export const Hero = () => {
           {/* Launch eyebrow — a styled <p>, not a heading, so document
               heading order stays H1-first (Lighthouse a11y). */}
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-ember-400">
-            Now on the App Store
+            1.1 now in beta
           </p>
           <h1
             id="hero-heading"
