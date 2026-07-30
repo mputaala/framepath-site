@@ -16,12 +16,25 @@ const App = ({ Component, pageProps }: AppProps) => {
     <MDXProvider components={mdxComponents}>
       <Head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/icons/favicon.ico" />
+        <link rel="icon" href="/icons/favicon.ico" sizes="any" />
+        <link
+          rel="icon"
+          href="/icons/favicon-32x32.png"
+          type="image/png"
+          sizes="32x32"
+        />
+        <link
+          rel="icon"
+          href="/icons/favicon-16x16.png"
+          type="image/png"
+          sizes="16x16"
+        />
         <link
           rel="apple-touch-icon"
           sizes="180x180"
           href="/icons/apple-touch-icon.png"
         />
+        <link rel="manifest" href="/site.webmanifest" />
       </Head>
       {/* Stationary global navigation (framepath-support#3). Rendered here so
           every route shares one sticky toolbar above its own <main>/<Footer>. */}
