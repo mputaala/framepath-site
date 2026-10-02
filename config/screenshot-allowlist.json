@@ -33,6 +33,24 @@
       "source": "Documentation/User Guide/Assets/Screenshots/11 — AI Shot Generation/Final/11.2.2_AI_generation_panel_on_iPad.png",
       "alt": "FramePath AI generation panel on iPad — coverage density selector (Minimal, Standard, Full) and setup budget stepper above the Generate button.",
       "priority": false
+    },
+    {
+      "id": "lens-kit-manager",
+      "source": "Documentation/User Guide/Assets/Screenshots/18 — Project Settings/Final/18.4_Lens_Kit_Manager_showing_the_three_preset_kits_and_a_custom_kit.png",
+      "alt": "FramePath Lens Kits sheet — the three preset kits (Anamorphic Set, Cine Primes, Documentary Zooms) and a custom kit under My Kits.",
+      "priority": false
+    },
+    {
+      "id": "iphone-storyboard-sheet",
+      "source": "Documentation/User Guide/Assets/Screenshots/10 — Storyboarding/Final/10.10_iPhone_storyboard_sheet_viewer.png",
+      "alt": "FramePath storyboard sheet on iPhone — portrait layout with the frame strip below the current storyboard frame.",
+      "priority": false
+    },
+    {
+      "id": "get-support-iphone",
+      "source": "Documentation/User Guide/Assets/Screenshots/19 — Getting Help and Support/Final/19.2_The_Get_Support_feedback_form_on_iPhone.png",
+      "alt": "FramePath's in-app Get Support form on iPhone — category picker (Feature request, Bug report, Help), summary, details and reply email.",
+      "priority": false
     }
   ]
 }
