@@ -51,6 +51,24 @@
       "source": "Documentation/User Guide/Assets/Screenshots/19 — Getting Help and Support/Final/19.2_The_Get_Support_feedback_form_on_iPhone.png",
       "alt": "FramePath's in-app Get Support form on iPhone — category picker (Feature request, Bug report, Help), summary, details and reply email.",
       "priority": false
+    },
+    {
+      "id": "export-project-package",
+      "source": "Documentation/User Guide/Assets/Screenshots/13 — Exporting/Final/13.14_Export_Project_Package_ready_to_share.png",
+      "alt": "FramePath's Export Project Package sheet for Café Break-Up Scene, showing 4 scenes, 12 shots and 29.9 MB with Save to Files and Share buttons.",
+      "priority": false
+    },
+    {
+      "id": "project-card-logline-iphone",
+      "source": "Documentation/User Guide/Assets/Screenshots/02 — Getting Started/Final/02.7_Project_card_with_thumbnail_and_logline.png",
+      "alt": "FramePath's Projects screen on iPhone: a project card with a charcoal-sketch thumbnail, a one-sentence logline and counts for scenes, actions, dialogue and shots, above a search field.",
+      "priority": false
+    },
+    {
+      "id": "archived-projects-iphone",
+      "source": "Documentation/User Guide/Assets/Screenshots/02 — Getting Started/Final/02.10_Archived_Projects_page.png",
+      "alt": "FramePath's Archived Projects screen on iPhone with an archived project card marked with an Archived badge.",
+      "priority": false
     }
   ]
 }
