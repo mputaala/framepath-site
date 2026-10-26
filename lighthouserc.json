@@ -12,12 +12,13 @@
       "settings": {
         "preset": "desktop"
       },
-      "numberOfRuns": 1
+      "numberOfRuns": 3
     },
     "assert": {
       "assertMatrix": [
         {
           "matchingUrlPattern": ".*",
+          "aggregationMethod": "median",
           "assertions": {
             "categories:performance": ["error", { "minScore": 0.95 }],
             "categories:accessibility": ["error", { "minScore": 1.0 }],
@@ -39,6 +40,7 @@
         },
         {
           "matchingUrlPattern": "http://localhost(:[0-9]+)?/$",
+          "aggregationMethod": "median",
           "assertions": {
             "total-byte-weight": ["error", { "maxNumericValue": 512000 }],
             "categories:seo": ["error", { "minScore": 0.95 }]
@@ -46,24 +48,28 @@
         },
         {
           "matchingUrlPattern": ".*/features/$",
+          "aggregationMethod": "median",
           "assertions": {
             "categories:seo": ["error", { "minScore": 0.95 }]
           }
         },
         {
           "matchingUrlPattern": ".*/help/$",
+          "aggregationMethod": "median",
           "assertions": {
             "categories:seo": ["error", { "minScore": 0.95 }]
           }
         },
         {
           "matchingUrlPattern": ".*/contact/$",
+          "aggregationMethod": "median",
           "assertions": {
             "categories:seo": ["error", { "minScore": 0.95 }]
           }
         },
         {
           "matchingUrlPattern": ".*/privacy/$",
+          "aggregationMethod": "median",
           "assertions": {
             "total-byte-weight": ["error", { "maxNumericValue": 204800 }],
             "categories:seo": ["error", { "minScore": 0.90 }]
